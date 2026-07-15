@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The project is establishing a reproducible PlayerBots-native foundation. No PlayerBots build, database migration, or gameplay customization has begun in this phase.
+The reproducible native PlayerBots core and module foundation has been configured, compiled, verified, and installed. Runtime configuration, database provisioning and migration, client-data extraction, server startup, and gameplay customization have not begun.
 
 ## Repository Model
 
@@ -46,11 +46,23 @@ The active core PlayerBots database updater uses `data/sql/playerbots/base/`. Th
 
 - Server: Ubuntu 24.04 LTS at `192.168.0.154`
 - Server source: `/mnt/data/wow-server/source`
+- Native build directory: `/mnt/data/wow-server/build/playerbots-release-gcc13`
+- Native install prefix: `/mnt/data/wow-server/source/env/dist`
 - Previous upstream build and accessible data directories were reviewed; the stopped Docker client-data volume remains unverified because its contents require elevated filesystem access.
-- `/mnt/data/wow-server/build` is empty, and the native default build location under `source/var/build` contains no prior compiled output.
+- The PlayerBots-native build is isolated from previous upstream output and from the native default build location under `source/var/build`.
 - `/mnt/data/wow-server/data/Data` contains raw enUS client MPQ data, not extracted server-side `dbc`, `maps`, `vmaps`, or `mmaps` directories.
 - Do not reuse the previous upstream build output for this PlayerBots fork.
 - Windows WoW 3.3.5a client realmlist: `192.168.0.154`
+
+Verified native build configuration:
+
+- GCC/G++ 13.3.0 with ccache and Unix Makefiles
+- `Release` build with `APPS_BUILD=all`, `TOOLS_BUILD=none`, `SCRIPTS=static`, and `MODULES=static`
+- Unit tests disabled; core and script precompiled headers enabled; compiler warnings enabled
+- Git revision embedding, jemalloc, and VMAP checks enabled; dynamic linking, core debug, and gperftools disabled
+- Build parallelism limited to three jobs on the four-core, 15 GiB RAM host
+- Installed binaries: `env/dist/bin/authserver` and `env/dist/bin/worldserver`
+- Installed configuration templates: `env/dist/etc/{authserver,worldserver}.conf.dist` and `env/dist/etc/modules/playerbots.conf.dist`
 
 Verified native Ubuntu build toolchain:
 
@@ -82,6 +94,9 @@ All verified versions meet the documented AzerothCore requirements. MySQL Server
 - Cloned the official `mod-playerbots` `master` branch at commit `93aaea3de19243c09ce9ecb25627dc9671715eed`.
 - Verified the current module build detection, database updater, SQL layout, and configuration paths.
 - Installed and verified the native Ubuntu compiler, build tools, and development libraries without installing MySQL Server, configuring databases, extracting client data, or starting a build.
+- Defined and reviewed a reproducible native GCC Release configuration with explicit source, build, install, CMake, and parallelism settings.
+- Configured and compiled the paired PlayerBots core and module successfully, including both `authserver` and `worldserver`.
+- Installed and verified the native binaries and configuration templates without configuring databases, extracting client data, or starting either server.
 
 ## Lessons Learned
 
@@ -94,10 +109,12 @@ All verified versions meet the documented AzerothCore requirements. MySQL Server
 - Module revisions must be recorded explicitly because the nested module repository is ignored by the parent Git repository.
 - Current PlayerBots SQL is stored under `modules/mod-playerbots/data/sql/`; some legacy module tooling still refers to obsolete `modules/mod-playerbots/sql/` paths.
 - Build-tool installation and database-server installation are separate operational steps; the core can be compiled against the MySQL 8 client development library before any database service is configured.
+- Enabling `WITH_WARNINGS` exposes repeated non-fatal unused-variable warnings from PlayerBots headers; these warnings did not prevent a successful build and should be reviewed upstream rather than patched locally during foundation work.
+- A valid PlayerBots build can be verified before runtime startup through CMake's static module graph, the generated module loader, the `MOD_PLAYERBOTS` compile definition, linked PlayerBots symbols, installed configuration, and shared-library checks.
 
 ## Immediate Next Step
 
-Define and review the reproducible native build configuration: select the compiler, build directory, install prefix, CMake options, parallelism, and acceptance checks. Do not run CMake or start compilation until that configuration is reviewed and explicitly approved.
+Define and review the native runtime and database-provisioning plan: establish configuration-file handling, database service and credential boundaries, database names and ownership, the supported core and PlayerBots schema/update sequence, backup and rollback points, and acceptance checks. Do not configure or import databases, extract client data, or start either server until the plan is reviewed and explicitly approved.
 
 ## Session Closeout Record
 
@@ -127,3 +144,17 @@ Define and review the reproducible native build configuration: select the compil
 - Confirmed no database configuration, client-data extraction, CMake configuration, or compilation occurred.
 - Confirmed the parent `custom` checkout and nested `mod-playerbots` checkout remained clean and synchronized.
 - Selected native build configuration review as the next controlled implementation step.
+
+### 2026-07-15 — Reproducible native PlayerBots build and installation
+
+- Reconfirmed the live parent and nested module branches, commits, remotes, tracking relationships, and clean working-tree state before configuration.
+- Selected GCC/G++ 13.3.0, ccache, Unix Makefiles, a `Release` build, static scripts and modules, and a three-job parallel limit.
+- Configured in `/mnt/data/wow-server/build/playerbots-release-gcc13` and installed to `/mnt/data/wow-server/source/env/dist`.
+- Confirmed CMake discovered `mod-playerbots`, generated the static module-loader call, and emitted the `MOD_PLAYERBOTS` compile definition.
+- Built and linked `authserver`, `libmodules.a`, and `worldserver` successfully despite non-fatal PlayerBots unused-variable warnings.
+- Confirmed both installed executables are valid x86-64 ELF binaries with no unresolved shared libraries and that PlayerBots symbols are linked into `worldserver`.
+- Confirmed the installed `playerbots.conf.dist` exactly matches the module source template.
+- Recorded binary SHA-256 hashes: `authserver` `24a5cdf52c7542b985cc4685f92537293772063cf7ae689376e8725f1fc029dc`; `worldserver` `114971bce2601e4b42aa4f83c1feb58168854d2b981a9c7de8291677fbf27a39`.
+- Confirmed neither server was started and no database configuration, SQL import, or client-data extraction occurred.
+- Confirmed the parent `custom` checkout and nested `mod-playerbots` checkout remained clean after generated build and ignored install artifacts were created.
+- Selected native runtime and database-provisioning review as the next controlled implementation step.

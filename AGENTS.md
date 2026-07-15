@@ -19,6 +19,19 @@ Prefer solutions in this order:
 5. Small isolated custom C++ modules
 6. Core modifications only as an absolute last resort
 
+## Program Management and Design Principles
+
+- Use `PROJECT_PRINCIPLES.md` as the durable decision framework for implementation, architecture, mechanics, and project management.
+- Evaluate meaningful decisions through both lenses: first-principles analysis and applicable best practices.
+- Start with the player or operational problem, constraints, desired outcome, and simplest mechanism that could satisfy them.
+- Then validate the proposal against established game-design practice and the documented conventions of AzerothCore and PlayerBots.
+- Prefer clean, readable, cohesive code with explicit responsibilities and minimal hidden behavior.
+- Apply DRY where duplicated knowledge or behavior would create maintenance risk; do not force abstractions merely to eliminate superficial repetition.
+- Favor modular, isolated, replaceable changes with narrow interfaces and minimal core coupling.
+- Treat efficiency as total project efficiency: player experience, runtime cost, development time, operational reliability, maintainability, and ability to absorb upstream updates.
+- Record consequential decisions, rejected alternatives, tradeoffs, and validation evidence in the appropriate project document.
+- Prefer small reversible increments with clear acceptance criteria and verification before expansion.
+
 ## Development Rules
 
 - Avoid changes to AzerothCore core files whenever possible.
@@ -50,6 +63,7 @@ Prefer solutions in this order:
 - Keep code, configuration, operational instructions, and documentation consistent whenever behavior changes.
 - Update `PROJECT_STATE.md` when milestones, environment state, architecture, workflow, risks, or next steps change.
 - Update `GAME_DESIGN.md` whenever gameplay goals, design decisions, progression, encounter philosophy, content direction, or player-experience assumptions change.
+- Update `PROJECT_PRINCIPLES.md` when the decision framework or program-management preferences change.
 - Record durable lessons learned in `PROJECT_STATE.md`; omit routine command transcripts and temporary troubleshooting noise.
 - Before ending a work session or handing off the project, review all touched files, relevant diffs, and verification results.
 - Commit cohesive checkpoints regularly on `custom` rather than accumulating a large mixed change.

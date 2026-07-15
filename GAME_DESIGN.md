@@ -44,6 +44,24 @@ Prefer, in order:
 
 PlayerBots compatibility and the ability to absorb official upstream updates take priority over invasive customization.
 
+## Design Decision Method
+
+Every meaningful mechanic, property, system, or content decision receives two passes:
+
+1. **First principles:** Define the intended player experience, the problem being solved, relevant constraints, interactions, failure modes, and the simplest mechanism that can produce the desired behavior.
+2. **Best practices:** Compare the result with established game-design practice and with AzerothCore and PlayerBots conventions, limitations, and maintainability requirements.
+
+Neither pass automatically overrides the other. A convention without a reason may not fit this project's goals, while a novel first-principles solution may carry avoidable implementation or balance risks. The selected design should explain the tradeoff when the two lenses point in different directions.
+
+For consequential mechanics, document:
+
+- Intended player behavior and experience
+- Inputs, outputs, and affected systems
+- Alternatives considered
+- Balance, exploit, AI, performance, and maintenance risks
+- How the mechanic will be measured or playtested
+- Reversal or tuning path if the result underperforms
+
 ## Open Design Work
 
 - Define measurable targets for progression speed and combat duration.

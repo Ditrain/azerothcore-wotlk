@@ -42,6 +42,20 @@ Prefer solutions in this order:
 - When uncertain, inspect rather than guess.
 - Challenge unnecessary complexity.
 - Recommend the simplest maintainable architecture.
+- Make project changes on `custom`; keep `Playerbot` aligned with `upstream/Playerbot`.
+- Treat `origin` as the project's writable fork and `upstream` as the official mod-playerbots repository.
+
+## Documentation and Session Closeout
+
+- Keep code, configuration, operational instructions, and documentation consistent whenever behavior changes.
+- Update `PROJECT_STATE.md` when milestones, environment state, architecture, workflow, risks, or next steps change.
+- Update `GAME_DESIGN.md` whenever gameplay goals, design decisions, progression, encounter philosophy, content direction, or player-experience assumptions change.
+- Record durable lessons learned in `PROJECT_STATE.md`; omit routine command transcripts and temporary troubleshooting noise.
+- Before ending a work session or handing off the project, review all touched files, relevant diffs, and verification results.
+- Commit cohesive checkpoints regularly on `custom` rather than accumulating a large mixed change.
+- Push completed checkpoints to `origin/custom` after verification unless the user explicitly asks to keep them local.
+- At closeout, report the active branch, commit, push status, tests or checks performed, unresolved issues, and the next recommended step.
+- Never claim a clean or synchronized repository without checking Git status and the local/remote commit relationship.
 
 ## Gameplay Direction
 

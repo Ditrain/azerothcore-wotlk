@@ -52,6 +52,23 @@ The active core PlayerBots database updater uses `data/sql/playerbots/base/`. Th
 - Do not reuse the previous upstream build output for this PlayerBots fork.
 - Windows WoW 3.3.5a client realmlist: `192.168.0.154`
 
+Verified native Ubuntu build toolchain:
+
+- Git 2.43.0
+- CMake 3.28.3
+- GNU Make 4.3
+- GCC/G++ 13.3.0
+- Clang/Clang++ 18.1.3
+- ccache 4.9.1
+- MySQL client development library 8.0.46
+- OpenSSL development library 3.0.13
+- Boost development libraries 1.83.0
+- bzip2 development library 1.0.8
+- Readline development library 8.2
+- ncurses development library 6.4
+
+All verified versions meet the documented AzerothCore requirements. MySQL Server is not installed as a native service; only the client development library required for compilation is installed.
+
 ## Completed
 
 - Replaced the previous upstream source tree with the mod-playerbots AzerothCore fork.
@@ -64,6 +81,7 @@ The active core PlayerBots database updater uses `data/sql/playerbots/base/`. Th
 - Completed read-only native Ubuntu build and installation reconnaissance.
 - Cloned the official `mod-playerbots` `master` branch at commit `93aaea3de19243c09ce9ecb25627dc9671715eed`.
 - Verified the current module build detection, database updater, SQL layout, and configuration paths.
+- Installed and verified the native Ubuntu compiler, build tools, and development libraries without installing MySQL Server, configuring databases, extracting client data, or starting a build.
 
 ## Lessons Learned
 
@@ -75,10 +93,11 @@ The active core PlayerBots database updater uses `data/sql/playerbots/base/`. Th
 - The PlayerBots core fork supplies required core integration, while the separately cloned module supplies the bot implementation, configuration, and module SQL.
 - Module revisions must be recorded explicitly because the nested module repository is ignored by the parent Git repository.
 - Current PlayerBots SQL is stored under `modules/mod-playerbots/data/sql/`; some legacy module tooling still refers to obsolete `modules/mod-playerbots/sql/` paths.
+- Build-tool installation and database-server installation are separate operational steps; the core can be compiled against the MySQL 8 client development library before any database service is configured.
 
 ## Immediate Next Step
 
-Install the required native Ubuntu build dependencies in one controlled step. Do not configure databases, extract client data, or start a build during that step.
+Define and review the reproducible native build configuration: select the compiler, build directory, install prefix, CMake options, parallelism, and acceptance checks. Do not run CMake or start compilation until that configuration is reviewed and explicitly approved.
 
 ## Session Closeout Record
 
@@ -99,3 +118,12 @@ Install the required native Ubuntu build dependencies in one controlled step. Do
 - Confirmed both the parent `custom` checkout and nested module checkout were clean after cloning.
 - Recorded the active module SQL/configuration paths and the obsolete legacy path conflict.
 - Selected native Ubuntu dependency installation as the next controlled implementation step.
+
+### 2026-07-15 — Native Ubuntu build dependencies
+
+- Installed and verified the supported native compiler toolchains, CMake, Make, ccache, and required development libraries.
+- Confirmed MySQL client development version 8.0.46, OpenSSL 3.0.13, and Boost 1.83.0 satisfy the documented minimum versions.
+- Confirmed MySQL Server remains uninstalled and inactive as a native service.
+- Confirmed no database configuration, client-data extraction, CMake configuration, or compilation occurred.
+- Confirmed the parent `custom` checkout and nested `mod-playerbots` checkout remained clean and synchronized.
+- Selected native build configuration review as the next controlled implementation step.

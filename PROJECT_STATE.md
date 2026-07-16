@@ -124,9 +124,9 @@ household operator guide in `ops/README.md`.
 - Status, journal logs, selective restarts, complete-pair restarts, and boot enable/disable commands are documented in the operator guide.
 - An attachable tmux console is intentionally not included; it remains a separate option if a concrete operational need develops.
 
-The tracked definitions pass `systemd-analyze verify`. They are not yet copied to
-`/etc/systemd/system` because that one-time installation requires the owner's
-interactive sudo authentication. Neither server was started during preparation.
+The tracked definitions and their installed copies pass `systemd-analyze verify`
+and byte-match. The installed files are root-owned mode `644`; the grouping target
+is disabled, both component services are static and inactive, and neither server was started during installation.
 
 Verified initial logical backup:
 
@@ -236,7 +236,7 @@ Current updater evidence:
 
 ## Immediate Next Step
 
-Have the owner copy the three reviewed unit definitions to `/etc/systemd/system` using the two commands in `ops/README.md`. Then reconfirm that the installed definitions match the tracked files, pass `systemd-analyze verify`, remain disabled and inactive, and that both game servers remain stopped. Starting the services for an operational smoke test is a separate approval-gated step.
+Obtain explicit approval for one controlled systemd operational smoke test. Start `azerothcore.target`, verify auth-before-world startup, both listeners, readiness, status, and journal visibility, then stop the target and verify reverse graceful shutdown, closed database pools, stopped processes, inactive units, and an empty private updater directory. Do not enable boot startup or begin gameplay customization during that step.
 
 ## Next Session Start Checklist
 
@@ -377,5 +377,5 @@ Before acting in a new session:
 - Selected two small native system services plus a grouping target over plain background scripts, user services, and the repository's broad service-manager framework.
 - Defined manual-on-demand startup, auth-before-world ordering, reverse graceful shutdown, execution as `ditrain`, five-minute stop timeouts, and crash-only automatic restart.
 - Documented start, stop, status, logs, full and selective restarts, failure behavior, and later boot enable/disable commands in `ops/README.md`.
-- Verified the tracked unit definitions with `systemd-analyze verify` without reading private configuration or starting either server.
-- Installation into `/etc/systemd/system` remains pending the owner's interactive sudo authentication; boot startup remains disabled.
+- Verified the tracked and installed unit definitions byte-match and pass `systemd-analyze verify` without reading private configuration or starting either server.
+- The owner installed the three public definitions under `/etc/systemd/system`; their ownership is `root:root` with mode `644`, the target remains disabled, and all three units remain inactive.

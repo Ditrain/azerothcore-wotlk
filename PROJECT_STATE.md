@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 baseline, private runtime configuration, and WoW 3.3.5a server-side client data are installed and verified for a trusted two-to-three-player household deployment. The four AzerothCore databases remain empty, repository SQL and built-in database updaters have not run, neither game server has been started, and gameplay customization has not begun.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, and the default PlayerBots population are installed and verified for a trusted two-to-three-player household deployment. Authserver and worldserver both completed their controlled first starts and graceful shutdowns; neither game server is currently running. The realm has 100 PlayerBots accounts and 1,000 bot characters available. The initial post-provisioning backup and gameplay customization have not begun.
 
 ## Repository Model
 
@@ -94,9 +94,9 @@ Verified native Ubuntu build toolchain:
 
 All verified versions meet the documented AzerothCore requirements. Ubuntu MySQL Server and Client 8.0.46 are installed. The `mysql` service is enabled, active, and healthy; classic protocol port 3306 and X Protocol port 33060 listen only on `127.0.0.1`. A LAN connection probe to port 3306 fails as intended.
 
-Verified native database and runtime baseline:
+Verified native database and runtime state:
 
-- Empty databases: `acore_auth`, `acore_characters`, `acore_world`, and `acore_playerbots`
+- Provisioned databases: `acore_auth`, `acore_characters`, `acore_world`, and `acore_playerbots`
 - Core database defaults: `utf8mb4` with `utf8mb4_unicode_ci`
 - PlayerBots database default: `utf8mb4` with `utf8mb4_general_ci`
 - Application identity: `acore@127.0.0.1`
@@ -106,6 +106,9 @@ Verified native database and runtime baseline:
 - Runtime configuration files are ignored by Git, owned by `ditrain`, and mode `600`; installed `.conf.dist` templates remain unchanged.
 - Runtime root, data, and log directories are mode `750`; the updater temporary directory is mode `700` and was empty at closeout.
 - Explicit runtime paths use the native source directory, `/usr/bin/mysql`, and the runtime data, log, and private temporary directories above.
+- The built-in updater initialized all four schemas and applied the pinned core, module, and PlayerBots updates without manual SQL imports.
+- First world initialization created 100 default PlayerBots accounts and 1,000 bot characters, reached the exact `(worldserver-daemon) ready...` marker, and produced an empty `Errors.log`.
+- Authserver and worldserver were stopped gracefully after verification; all four database pools closed and neither game server is currently running.
 
 ## Reviewed Native Runtime and Database Plan
 
@@ -158,6 +161,9 @@ Current updater evidence:
 - Created the runtime data, log, and private updater temporary directories with proportional owner-controlled permissions while leaving all installed `.conf.dist` templates unchanged.
 - Built and installed the four pinned client-data extraction tools in an isolated tool-only build without changing the verified server binaries or installed configuration templates.
 - Extracted and verified enUS client build 12340 data into `/mnt/data/wow-server/runtime/data`: 246 DBC files, 5,744 map files, 14 camera files, 101 vmap trees plus 2,693 vmap tiles, and 98 mmap headers plus 3,682 mmap tiles.
+- Provisioned the auth database through a controlled authserver first start, verified its database pool, and stopped it gracefully.
+- Provisioned the characters, world, and dedicated PlayerBots databases through a controlled worldserver first start using only the built-in updaters.
+- Created and verified the official default population of 100 PlayerBots accounts and 1,000 bot characters, reached full worldserver readiness, and stopped worldserver gracefully after all queued database writes drained.
 
 ## Lessons Learned
 
@@ -176,6 +182,7 @@ Current updater evidence:
 - Efficient reconnaissance starts with a bounded decision. Consolidate read-only checks, surface important findings early, and stop when further inspection is unlikely to change the selected mechanism.
 - The PlayerBots database-creation script is not appropriate for this deployment because it grants global privileges with `GRANT OPTION`; create the four databases and scoped grants explicitly instead.
 - The updater writes a fixed `mysql_ac.conf` containing the database password under `TempDir`; protect that directory and keep it out of Git.
+- The updater can leave `mysql_ac.conf` behind after a clean server shutdown and creates it with broader file permissions than desired. Never read it; after confirming both servers are stopped, restrict and remove only that exact temporary file, then verify the mode-`700` temporary directory is empty.
 - Selecting the MariaDB driver in DBeaver identifies the client driver, not the database server installed on the target host; confirm the saved connection host and port before inferring server state.
 - `GRANT USAGE ON *.*` in `SHOW GRANTS` represents an account with no global privileges; the effective application rights are the four explicit database-scoped grants.
 - Insert operational secrets through an owner-controlled hidden prompt. Verify permissions and placeholder removal locally, and avoid displaying or fingerprinting credential-bearing configuration during remote review.
@@ -185,7 +192,7 @@ Current updater evidence:
 
 ## Immediate Next Step
 
-Obtain explicit approval for one controlled initial-provisioning step. Reconfirm the pinned repositories, runtime data, private configuration permissions, MySQL health, empty databases, and stopped servers; then run the built-in updater through the intended authserver-first and worldserver-second startup sequence, verify the core and PlayerBots schemas and full server readiness, stop both servers, and stop before creating the post-provisioning backup.
+Obtain explicit approval for one controlled post-provisioning logical-backup step. Reconfirm the pinned repositories, provisioned database/runtime state, MySQL loopback-only health, empty private updater directory, and stopped servers; then create a complete logical backup of all four databases in a protected staging location, verify its contents and restore procedure without exposing credentials, and place the durable copy on storage separate from MySQL's data directory. Do not begin gameplay customization until the backup milestone is complete.
 
 ## Next Session Start Checklist
 
@@ -196,9 +203,9 @@ Before acting in a new session:
 - Reconfirm MySQL is healthy and bound only to loopback, neither game server is running, `/mnt/data/wow-server/runtime/tmp` is empty and mode `700`, and the three private runtime configuration files remain owned by `ditrain` and mode `600`.
 - Do not read, display, hash, fingerprint, replace, or commit the secret-bearing `.conf` files. The saved application credential is already present; do not request the database password.
 - Reconfirm `/mnt/data/wow-server/runtime/data` contains the verified `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps` outputs with the recorded counts and owner-controlled permissions. Do not re-extract unless verification identifies a concrete incompatibility.
-- Treat initial provisioning as a database-mutating and server-starting step. Present the exact authserver-first and worldserver-second procedure, acceptance criteria, stop conditions, and recovery implications, and obtain explicit approval before running it.
-- During the approved provisioning step, use the built-in AzerothCore and PlayerBots updaters from the pinned installation; do not execute either repository database-creation script or manually import SQL.
-- Stop both servers after schema initialization and readiness verification. Record schema/update evidence without exposing credentials, then stop before creating the post-provisioning logical backup, which remains a separate approval-gated step.
+- Treat the initial post-provisioning logical backup as the next approval-gated step. Present its exact scope, protected paths, verification, retention, and restore-test plan before running it.
+- Do not rerun database creation scripts or manually import SQL; future schema changes continue through the pinned built-in updaters after a verified backup.
+- Preserve the verified day-one bot population: 100 bot accounts and 1,000 bot characters. Do not remove or regenerate it unless a concrete gameplay decision requires that change.
 - Do not begin gameplay customization until the provisioned native PlayerBots server is reproducibly ready and the initial backup milestone is complete.
 
 ## Session Closeout Record
@@ -281,3 +288,15 @@ Before acting in a new session:
 - Restricted extracted directories to mode `750` and files to mode `640`, confirmed no symlinks remained, and removed only the approved extraction staging remnants.
 - Reconfirmed MySQL remained healthy and loopback-only, the LAN database probe remained refused, both game servers remained stopped, private runtime configuration permissions remained `600`, and no SQL, updater, database, server-start, or backup action occurred.
 - Selected controlled built-in database provisioning and first-start readiness verification as the next approval-gated step.
+
+### 2026-07-16 - Initial database and PlayerBots provisioning
+
+- Reconfirmed the pinned parent, reference, and nested module revisions; verified clean tracking state, unchanged server binary hashes, byte-identical installed templates, complete client data, private configuration permissions, loopback-only MySQL listeners, and stopped game servers.
+- Started authserver first with its saved private configuration, allowed the built-in updater to initialize `acore_auth`, verified `Started auth database connection pool.`, and stopped authserver gracefully.
+- Started worldserver second and allowed only the built-in core and module updaters to initialize and update `acore_characters`, `acore_world`, and `acore_playerbots`; no repository creation script or manual SQL import was used.
+- Included the intended official default bot population from day one: 100 bot accounts and 1,000 bot characters were created and reported available.
+- Verified the exact `(worldserver-daemon) ready...` marker, an empty `Errors.log`, and no fatal provisioning marker.
+- Sent a graceful interrupt and allowed 351 queued character queries and 541 queued PlayerBots queries to drain; verified all four database pools closed and both game servers stopped.
+- Without reading it, restricted and removed the updater-created `mysql_ac.conf` remnant after each stopped-server phase; verified `/mnt/data/wow-server/runtime/tmp` is empty and mode `700` at closeout.
+- Reconfirmed MySQL is enabled, active, and loopback-only; private runtime files remain mode `600`; installed templates and server binaries remain unchanged; and the parent and nested module worktrees remain clean and synchronized.
+- Selected a complete, verified post-provisioning logical backup of all four databases as the next separate approval-gated step before gameplay customization.

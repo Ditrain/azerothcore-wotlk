@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, and end-to-end LAN login path are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Neither game server is currently running. Gameplay customization has not begun.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, end-to-end LAN login path, and manual native systemd operating workflow are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Neither game server is currently running. Gameplay customization has not begun.
 
 ## Repository Model
 
@@ -126,7 +126,10 @@ household operator guide in `ops/README.md`.
 
 The tracked definitions and their installed copies pass `systemd-analyze verify`
 and byte-match. The installed files are root-owned mode `644`; the grouping target
-is disabled, both component services are static and inactive, and neither server was started during installation.
+is disabled, and both component services are static. A controlled manual start/stop
+test verified execution as `ditrain`, auth-before-world startup, listeners on 3724
+and 8085, fresh world readiness, journal access, zero restart loops, reverse graceful
+shutdown, closure of all five database pools, inactive final state, and empty private temp storage.
 
 Verified initial logical backup:
 
@@ -236,7 +239,7 @@ Current updater evidence:
 
 ## Immediate Next Step
 
-Obtain explicit approval for one controlled systemd operational smoke test. Start `azerothcore.target`, verify auth-before-world startup, both listeners, readiness, status, and journal visibility, then stop the target and verify reverse graceful shutdown, closed database pools, stopped processes, inactive units, and an empty private updater directory. Do not enable boot startup or begin gameplay customization during that step.
+The stable reproducible foundation is complete. Obtain explicit approval before beginning the first gameplay-design increment: define measurable combat and progression targets and select one bounded starter-zone content slice for end-to-end redesign. Preserve the manual boot policy and verified operational baseline while that planning occurs.
 
 ## Next Session Start Checklist
 
@@ -379,3 +382,15 @@ Before acting in a new session:
 - Documented start, stop, status, logs, full and selective restarts, failure behavior, and later boot enable/disable commands in `ops/README.md`.
 - Verified the tracked and installed unit definitions byte-match and pass `systemd-analyze verify` without reading private configuration or starting either server.
 - The owner installed the three public definitions under `/etc/systemd/system`; their ownership is `root:root` with mode `644`, the target remains disabled, and all three units remain inactive.
+
+### 2026-07-16 - Manual systemd operational smoke test
+
+- Reconfirmed the clean synchronized repository, active loopback-only MySQL service, disabled and inactive AzerothCore target, stopped game processes, and empty mode-`700` private updater directory before startup.
+- Started the paired server workflow through `azerothcore.target` with owner-authenticated systemd control while leaving boot startup disabled.
+- Verified both services ran as `ditrain`, authserver launched before worldserver, ports 3724 and 8085 listened, and worldserver reached its fresh `(worldserver-daemon) ready...` marker.
+- Verified systemd status and journal visibility, no error-severity journal entries, no restart loop, and only the accepted stock `Eye of Dar'Khan` missing-waypoint warning in the fresh error log.
+- Stopped `azerothcore.target` and verified systemd reversed the dependency order: worldserver stopped before authserver.
+- Worldserver drained 1,844 queued character queries and closed the characters, world, auth, and PlayerBots database pools; authserver then closed its auth database pool.
+- Both services exited successfully with status `0`, no restart occurred, ports 3724 and 8085 closed, and no authserver or worldserver process remained.
+- Reconfirmed MySQL remained active and bound only to loopback, the private updater directory remained empty and mode `700`, all three AzerothCore units were inactive, and boot startup remained disabled.
+- Completed the stable native PlayerBots foundation and selected bounded gameplay-design planning as the next approval-gated phase.

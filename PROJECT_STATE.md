@@ -187,6 +187,20 @@ Current updater evidence:
 
 Obtain explicit approval for one controlled initial-provisioning step. Reconfirm the pinned repositories, runtime data, private configuration permissions, MySQL health, empty databases, and stopped servers; then run the built-in updater through the intended authserver-first and worldserver-second startup sequence, verify the core and PlayerBots schemas and full server readiness, stop both servers, and stop before creating the post-provisioning backup.
 
+## Next Session Start Checklist
+
+Before acting in a new session:
+
+- Read `AGENTS.md`, `PROJECT_PRINCIPLES.md`, `PROJECT_STATE.md`, and `GAME_DESIGN.md` completely.
+- Work on `custom`; verify it is clean and synchronized with `origin/custom`. Verify local `Playerbot` remains synchronized with `upstream/Playerbot` at `52f58186a53399e603c46c24977fe60fcaad7f9d`, and nested `modules/mod-playerbots` `master` remains synchronized with `origin/master` at `93aaea3de19243c09ce9ecb25627dc9671715eed`.
+- Reconfirm MySQL is healthy and bound only to loopback, neither game server is running, `/mnt/data/wow-server/runtime/tmp` is empty and mode `700`, and the three private runtime configuration files remain owned by `ditrain` and mode `600`.
+- Do not read, display, hash, fingerprint, replace, or commit the secret-bearing `.conf` files. The saved application credential is already present; do not request the database password.
+- Reconfirm `/mnt/data/wow-server/runtime/data` contains the verified `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps` outputs with the recorded counts and owner-controlled permissions. Do not re-extract unless verification identifies a concrete incompatibility.
+- Treat initial provisioning as a database-mutating and server-starting step. Present the exact authserver-first and worldserver-second procedure, acceptance criteria, stop conditions, and recovery implications, and obtain explicit approval before running it.
+- During the approved provisioning step, use the built-in AzerothCore and PlayerBots updaters from the pinned installation; do not execute either repository database-creation script or manually import SQL.
+- Stop both servers after schema initialization and readiness verification. Record schema/update evidence without exposing credentials, then stop before creating the post-provisioning logical backup, which remains a separate approval-gated step.
+- Do not begin gameplay customization until the provisioned native PlayerBots server is reproducibly ready and the initial backup milestone is complete.
+
 ## Session Closeout Record
 
 ### 2026-07-15 — Repository foundation

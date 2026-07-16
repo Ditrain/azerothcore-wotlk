@@ -68,6 +68,9 @@ When the lenses disagree:
 - Build and preserve a playable, stable foundation before broad customization.
 - Work in small, cohesive, testable increments.
 - Define the outcome and acceptance criteria before implementation.
+- Scale architecture, security, process, and verification to the project's actual users, exposure, data value, and credible failure modes; do not import enterprise complexity into a small trusted household deployment without a specific benefit.
+- Before adding a component, account, abstraction, control, or investigation step, identify the concrete likely problem it solves and whether that benefit justifies its ongoing operational and maintenance cost.
+- Bound reconnaissance by the decision it must support. Consolidate checks, report decision-changing findings early, and stop when additional inspection is unlikely to change the recommendation.
 - Prefer reversible decisions while uncertainty is high.
 - Surface dependencies, risks, assumptions, and opportunity costs early.
 - Avoid scope expansion without explaining its value and downstream cost.

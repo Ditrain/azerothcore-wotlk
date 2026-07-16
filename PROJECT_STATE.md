@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core and module foundation has been configured, compiled, verified, and installed. Runtime configuration, database provisioning and migration, client-data extraction, server startup, and gameplay customization have not begun.
+The reproducible native PlayerBots core and module foundation has been configured, compiled, verified, and installed. The native runtime and database-provisioning plan has been reviewed and simplified for a trusted two-to-three-player household deployment. Runtime configuration, database installation and provisioning, client-data extraction, server startup, and gameplay customization have not begun.
 
 ## Repository Model
 
@@ -81,6 +81,32 @@ Verified native Ubuntu build toolchain:
 
 All verified versions meet the documented AzerothCore requirements. MySQL Server is not installed as a native service; only the client development library required for compilation is installed.
 
+## Reviewed Native Runtime and Database Plan
+
+The deployment is a trusted household LAN server for two or three family members. Operational choices should protect against credible failures--configuration mistakes, failed schema updates, accidental secret commits, unintended network exposure, and disk loss--without enterprise-style identity or secret-management complexity.
+
+Selected baseline:
+
+- Install Ubuntu's native MySQL 8.0 server and matching client. The current binaries are linked to MySQL client 8.0.46, the core requires MySQL 8.0 or newer, and the external `mysql` executable is required by the built-in updater.
+- Bind MySQL to loopback only. Do not expose port 3306 to the LAN.
+- Use the four conventional databases: `acore_auth`, `acore_characters`, `acore_world`, and `acore_playerbots`.
+- Use one strong local `acore@127.0.0.1` credential shared by authserver, worldserver, and PlayerBots, with privileges limited to those four databases and without global privileges or `GRANT OPTION`.
+- Do not execute `modules/mod-playerbots/data/sql/playerbots/create/create_mysql.sql`; it grants global privileges on `*.*` with `GRANT OPTION` and is unnecessarily broad.
+- Create runtime files from the installed `.conf.dist` templates while leaving the templates unchanged: `env/dist/etc/authserver.conf`, `env/dist/etc/worldserver.conf`, and `env/dist/etc/modules/playerbots.conf`. Keep runtime files untracked and restrict their permissions.
+- Set explicit `SourceDirectory`, `MySQLExecutable`, `DataDir`, `LogsDir`, and a private `TempDir`. The updater writes the password to a fixed `mysql_ac.conf` under `TempDir`; use a non-shared, access-restricted location and do not expose or commit it.
+- Keep the built-in updater enabled. Authserver initializes auth first. Worldserver then initializes characters and world, discovers PlayerBots character/world SQL through the compiled `AC_MODULES_LIST`, and finally invokes the PlayerBots database hook to initialize and update `acore_playerbots`.
+- Do not use the module's legacy `conf/conf.sh.dist` paths. Current SQL is under `modules/mod-playerbots/data/sql/`.
+- Extract and verify `dbc`, `maps`, `vmaps`, and `mmaps` from the raw client data before the first worldserver provisioning run so database mutation and full worldserver readiness can be validated in one controlled step.
+- Create a complete logical backup after successful initial provisioning and before future schema/module updates. Keep restorable copies on a disk separate from MySQL's data directory and test recovery before treating the server as durable.
+
+Current updater evidence:
+
+- Core base schemas are populated lexically from `data/sql/base/db_{auth,characters,world}/`.
+- Released core updates run before module SQL.
+- PlayerBots character and world SQL is recursively discovered from the module and recorded as `MODULE` updates.
+- The dedicated PlayerBots database is populated from `modules/mod-playerbots/data/sql/playerbots/base/`, then updated from its configured include directories.
+- The current module's early-sorting character and world update files operate on core tables that already exist, so the inspected ordering is viable at the pinned revisions. Recheck this after module upgrades.
+
 ## Completed
 
 - Replaced the previous upstream source tree with the mod-playerbots AzerothCore fork.
@@ -97,6 +123,8 @@ All verified versions meet the documented AzerothCore requirements. MySQL Server
 - Defined and reviewed a reproducible native GCC Release configuration with explicit source, build, install, CMake, and parallelism settings.
 - Configured and compiled the paired PlayerBots core and module successfully, including both `authserver` and `worldserver`.
 - Installed and verified the native binaries and configuration templates without configuring databases, extracting client data, or starting either server.
+- Defined and reviewed the native runtime and database-provisioning plan against the current core and PlayerBots updater implementation.
+- Simplified the plan to match the trusted household deployment: one loopback-only MySQL service, one scoped application credential, four databases, built-in updates, private runtime configuration, and practical backups.
 
 ## Lessons Learned
 
@@ -111,10 +139,14 @@ All verified versions meet the documented AzerothCore requirements. MySQL Server
 - Build-tool installation and database-server installation are separate operational steps; the core can be compiled against the MySQL 8 client development library before any database service is configured.
 - Enabling `WITH_WARNINGS` exposes repeated non-fatal unused-variable warnings from PlayerBots headers; these warnings did not prevent a successful build and should be reviewed upstream rather than patched locally during foundation work.
 - A valid PlayerBots build can be verified before runtime startup through CMake's static module graph, the generated module loader, the `MOD_PLAYERBOTS` compile definition, linked PlayerBots symbols, installed configuration, and shared-library checks.
+- Security and operational architecture must be proportional to the real deployment. This household server does not justify separate database identities, separate service identities, or enterprise secret infrastructure unless a concrete future requirement appears.
+- Efficient reconnaissance starts with a bounded decision. Consolidate read-only checks, surface important findings early, and stop when further inspection is unlikely to change the selected mechanism.
+- The PlayerBots database-creation script is not appropriate for this deployment because it grants global privileges with `GRANT OPTION`; create the four databases and scoped grants explicitly instead.
+- The updater writes a fixed `mysql_ac.conf` containing the database password under `TempDir`; protect that directory and keep it out of Git.
 
 ## Immediate Next Step
 
-Define and review the native runtime and database-provisioning plan: establish configuration-file handling, database service and credential boundaries, database names and ownership, the supported core and PlayerBots schema/update sequence, backup and rollback points, and acceptance checks. Do not configure or import databases, extract client data, or start either server until the plan is reviewed and explicitly approved.
+Obtain explicit approval for one controlled implementation step: install Ubuntu MySQL 8.0 Server and its matching client only. Then verify the installed versions, service health, loopback-only network exposure, available updater/backup executables, repository state, and that neither game server has started. Stop and report before creating databases or users, writing runtime configuration, importing or updating SQL, extracting client data, or starting authserver/worldserver.
 
 ## Session Closeout Record
 
@@ -158,3 +190,16 @@ Define and review the native runtime and database-provisioning plan: establish c
 - Confirmed neither server was started and no database configuration, SQL import, or client-data extraction occurred.
 - Confirmed the parent `custom` checkout and nested `mod-playerbots` checkout remained clean after generated build and ignored install artifacts were created.
 - Selected native runtime and database-provisioning review as the next controlled implementation step.
+
+### 2026-07-15 — Native runtime and database-provisioning review
+
+- Re-read `AGENTS.md`, `PROJECT_PRINCIPLES.md`, `PROJECT_STATE.md`, and `GAME_DESIGN.md` before inspection.
+- Reconfirmed the clean parent `custom` branch at `28cecb85b1d69c1f2fca5b213c63728a5b871d53` tracking `origin/custom` and the clean nested module `master` branch at `93aaea3de19243c09ce9ecb25627dc9671715eed` tracking `origin/master`.
+- Reconfirmed installed binary hashes and exact template/source matches; confirmed neither game server nor a native MySQL/MariaDB service was running.
+- Inspected the current `DatabaseLoader`, `DBUpdater`, `UpdateFetcher`, world/auth startup loaders, PlayerBots database hook, configuration templates, and live SQL paths rather than relying on generic instructions.
+- Selected native Ubuntu MySQL 8.0 plus its matching client, four conventional databases, one loopback-only scoped application credential, built-in schema/update handling, and a practical logical-backup procedure.
+- Rejected the module's global-grant database creation script and recorded the updater's private `TempDir` requirement.
+- Confirmed raw client MPQs are present but extracted server data and extraction tools are not; client-data extraction must precede the first worldserver provisioning run.
+- Corrected the initial over-engineered credential/service separation proposal after applying the real household threat and failure model.
+- Made no database, runtime configuration, client-data, package, or server-process changes during the review.
+- Selected MySQL server/client installation and verification as the next single approval-gated step.

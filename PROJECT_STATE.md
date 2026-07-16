@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core and module foundation has been configured, compiled, verified, and installed. Native MySQL 8.0, the four empty AzerothCore databases, the scoped application account, and private runtime configuration are installed and verified for a trusted two-to-three-player household deployment. Repository SQL has not been applied, client data has not been extracted, neither game server has been started, and gameplay customization has not begun.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 baseline, private runtime configuration, and WoW 3.3.5a server-side client data are installed and verified for a trusted two-to-three-player household deployment. The four AzerothCore databases remain empty, repository SQL and built-in database updaters have not run, neither game server has been started, and gameplay customization has not begun.
 
 ## Repository Model
 
@@ -49,12 +49,13 @@ The active core PlayerBots database updater uses `data/sql/playerbots/base/`. Th
 - Native build directory: `/mnt/data/wow-server/build/playerbots-release-gcc13`
 - Native install prefix: `/mnt/data/wow-server/source/env/dist`
 - Runtime root: `/mnt/data/wow-server/runtime`
-- Planned extracted-data directory: `/mnt/data/wow-server/runtime/data`
+- Extracted-data directory: `/mnt/data/wow-server/runtime/data`
 - Runtime log directory: `/mnt/data/wow-server/runtime/logs`
 - Private updater temporary directory: `/mnt/data/wow-server/runtime/tmp`
 - Previous upstream build and accessible data directories were reviewed; the stopped Docker client-data volume remains unverified because its contents require elevated filesystem access.
 - The PlayerBots-native build is isolated from previous upstream output and from the native default build location under `source/var/build`.
-- `/mnt/data/wow-server/data/Data` contains raw enUS client MPQ data, not extracted server-side `dbc`, `maps`, `vmaps`, or `mmaps` directories.
+- `/mnt/data/wow-server/data/Data` contains the raw enUS client MPQs used for the verified extraction.
+- `/mnt/data/wow-server/runtime/data` contains the pinned-tool output: `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps`.
 - Do not reuse the previous upstream build output for this PlayerBots fork.
 - Windows WoW 3.3.5a client realmlist: `192.168.0.154`
 
@@ -67,6 +68,14 @@ Verified native build configuration:
 - Build parallelism limited to three jobs on the four-core, 15 GiB RAM host
 - Installed binaries: `env/dist/bin/authserver` and `env/dist/bin/worldserver`
 - Installed configuration templates: `env/dist/etc/{authserver,worldserver}.conf.dist` and `env/dist/etc/modules/playerbots.conf.dist`
+
+Verified native extraction-tool configuration:
+
+- Isolated build directory: `/mnt/data/wow-server/build/playerbots-tools-release-gcc13`
+- `Release` build with `APPS_BUILD=none`, `TOOLS_BUILD=maps-only`, `SCRIPTS=none`, and `MODULES=none`
+- GCC/G++ 13.3.0 with ccache, Unix Makefiles, tests disabled, warnings enabled, and three-job build/extraction parallelism
+- Installed tools: `env/dist/bin/{map_extractor,vmap4_extractor,vmap4_assembler,mmaps_generator}` and `env/dist/bin/mmaps-config.yaml`
+- Extraction logs: `/mnt/data/wow-server/runtime/logs/client-data-*-777577671778.log`
 
 Verified native Ubuntu build toolchain:
 
@@ -147,6 +156,8 @@ Current updater evidence:
 - Created and authenticated the single `acore@127.0.0.1` application account with privileges limited to the four databases and without global privileges or `GRANT OPTION`.
 - Created the untracked runtime configuration files from the installed templates, applied explicit native runtime paths, inserted the database credential through an owner-only hidden prompt, and restricted the secret-bearing files to mode `600`.
 - Created the runtime data, log, and private updater temporary directories with proportional owner-controlled permissions while leaving all installed `.conf.dist` templates unchanged.
+- Built and installed the four pinned client-data extraction tools in an isolated tool-only build without changing the verified server binaries or installed configuration templates.
+- Extracted and verified enUS client build 12340 data into `/mnt/data/wow-server/runtime/data`: 246 DBC files, 5,744 map files, 14 camera files, 101 vmap trees plus 2,693 vmap tiles, and 98 mmap headers plus 3,682 mmap tiles.
 
 ## Lessons Learned
 
@@ -168,10 +179,13 @@ Current updater evidence:
 - Selecting the MariaDB driver in DBeaver identifies the client driver, not the database server installed on the target host; confirm the saved connection host and port before inferring server state.
 - `GRANT USAGE ON *.*` in `SHOW GRANTS` represents an account with no global privileges; the effective application rights are the four explicit database-scoped grants.
 - Insert operational secrets through an owner-controlled hidden prompt. Verify permissions and placeholder removal locally, and avoid displaying or fingerprinting credential-bearing configuration during remote review.
+- The current map extractor also produces `Cameras`; preserve that directory under `DataDir` because the pinned worldserver loads cinematic camera assets from the extracted data path.
+- A zero exit from `map_extractor` is not sufficient evidence by itself because a missing locale can also return zero; require the detected locale, client build, key files, counts, and compatible headers.
+- The pinned vmap extractor's successful raw output contains `Buildings/dir_bin` without a separate `Buildings/dir`; use its explicit completion message and the assembler's successful output rather than assuming both index names exist.
 
 ## Immediate Next Step
 
-Obtain explicit approval for one controlled implementation step: build and install the AzerothCore client-data extraction tools for the pinned PlayerBots source and module revisions. Then extract `dbc`, `maps`, `vmaps`, and `mmaps` from `/mnt/data/wow-server/data/Data` into `/mnt/data/wow-server/runtime/data`, verify completeness and compatibility, confirm neither game server was started, and stop before applying repository SQL or provisioning databases through the server updaters.
+Obtain explicit approval for one controlled initial-provisioning step. Reconfirm the pinned repositories, runtime data, private configuration permissions, MySQL health, empty databases, and stopped servers; then run the built-in updater through the intended authserver-first and worldserver-second startup sequence, verify the core and PlayerBots schemas and full server readiness, stop both servers, and stop before creating the post-provisioning backup.
 
 ## Session Closeout Record
 
@@ -242,3 +256,14 @@ Obtain explicit approval for one controlled implementation step: build and insta
 - The owner inserted the saved application password through a hidden local prompt. Remote verification intentionally did not read, display, or fingerprint the credential.
 - Reconfirmed MySQL remained healthy, authserver and worldserver remained stopped, the private updater directory remained empty, installed templates remained intact, and both Git worktrees remained clean and synchronized.
 - Selected client-data extractor build, extraction, and verification as the next approval-gated step before any server-driven database provisioning.
+
+### 2026-07-16 — Native client-data extraction
+
+- Reconfirmed parent `custom` at `77757767177837939f33268f7556e2dd01c1a14a`, reference `Playerbot` at `52f58186a53399e603c46c24977fe60fcaad7f9d`, and nested module `master` at `93aaea3de19243c09ce9ecb25627dc9671715eed`, all clean and synchronized before implementation.
+- Configured the isolated `/mnt/data/wow-server/build/playerbots-tools-release-gcc13` tool-only build and compiled and installed `map_extractor`, `vmap4_extractor`, `vmap4_assembler`, and `mmaps_generator` with the three-job limit.
+- Confirmed the existing authserver and worldserver hashes and all installed `.conf.dist` templates remained unchanged after tool installation.
+- Extracted enUS client build 12340 into an isolated staging directory, requiring successful tool completion and validating `WDBC`, `MAPS` v9, `VMAP_4.8`, and `MMAP` v19 headers before promotion.
+- Promoted 246 DBC files (87 MiB), 5,744 map files (295 MiB), 14 camera files (60 KiB), 101 vmap trees plus 2,693 vmap tiles (657 MiB), and 98 mmap headers plus 3,682 mmap tiles (2.1 GiB) into `/mnt/data/wow-server/runtime/data`.
+- Restricted extracted directories to mode `750` and files to mode `640`, confirmed no symlinks remained, and removed only the approved extraction staging remnants.
+- Reconfirmed MySQL remained healthy and loopback-only, the LAN database probe remained refused, both game servers remained stopped, private runtime configuration permissions remained `600`, and no SQL, updater, database, server-start, or backup action occurred.
+- Selected controlled built-in database provisioning and first-start readiness verification as the next approval-gated step.

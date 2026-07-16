@@ -1,0 +1,8 @@
+[Unit]
+Description=AzerothCore PlayerBots household server
+Requires=mysql.service
+Wants=azerothcore-auth.service azerothcore-world.service
+After=mysql.service network-online.target
+
+[Install]
+WantedBy=multi-user.target

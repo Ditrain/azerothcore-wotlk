@@ -110,6 +110,24 @@ Verified native database and runtime state:
 - First world initialization created 100 default PlayerBots accounts and 1,000 bot characters, reached the exact `(worldserver-daemon) ready...` marker, and produced an empty `Errors.log`.
 - Authserver and worldserver were stopped gracefully after verification; all four database pools closed and neither game server is currently running.
 
+## Native Server Operations
+
+A minimal native systemd workflow is defined under `ops/systemd/`, with its
+household operator guide in `ops/README.md`.
+
+- `azerothcore.target` groups authserver and worldserver for coordinated operation.
+- Both services run as the existing `ditrain` owner and use the existing private runtime configuration in place.
+- MySQL is a required dependency; authserver is ordered before worldserver, and shutdown reverses that order.
+- The core's supported `SIGTERM` path provides graceful shutdown, with a five-minute stop timeout for PlayerBots database queues to drain.
+- `Restart=on-failure` retries crashes after five seconds without restarting an intentional clean shutdown.
+- The initial policy is manual on-demand startup. Boot startup remains disabled unless the owner explicitly enables `azerothcore.target` later.
+- Status, journal logs, selective restarts, complete-pair restarts, and boot enable/disable commands are documented in the operator guide.
+- An attachable tmux console is intentionally not included; it remains a separate option if a concrete operational need develops.
+
+The tracked definitions pass `systemd-analyze verify`. They are not yet copied to
+`/etc/systemd/system` because that one-time installation requires the owner's
+interactive sudo authentication. Neither server was started during preparation.
+
 Verified initial logical backup:
 
 - Bundle: `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` (94 MiB)
@@ -218,7 +236,7 @@ Current updater evidence:
 
 ## Immediate Next Step
 
-Review and obtain explicit approval for one simple native server-operation step. Inspect the pinned runtime's current service expectations, then propose the smallest maintainable start/stop/status/log workflow for authserver and worldserver, including ordering, graceful shutdown, owner permissions, restart behavior, and whether household boot-time startup is actually desired. Do not introduce separate service identities or enterprise secret infrastructure without a concrete need, and do not begin gameplay customization during that operational step.
+Have the owner copy the three reviewed unit definitions to `/etc/systemd/system` using the two commands in `ops/README.md`. Then reconfirm that the installed definitions match the tracked files, pass `systemd-analyze verify`, remain disabled and inactive, and that both game servers remain stopped. Starting the services for an operational smoke test is a separate approval-gated step.
 
 ## Next Session Start Checklist
 
@@ -351,3 +369,13 @@ Before acting in a new session:
 - Recorded the non-blocking stock `Eye of Dar'Khan` missing-waypoint warning for future triage rather than expanding the foundation scope.
 - Stopped worldserver and authserver gracefully, verified all four database pools closed, removed only the updater-created temporary credential remnant without reading it, and returned the private temporary directory to empty mode-`700` state.
 - Selected review of a proportional native server start/stop/status/log workflow as the next approval-gated operational step before gameplay customization.
+
+### 2026-07-16 - Manual native systemd workflow prepared
+
+- Reconfirmed the pinned parent, reference, and nested module repositories are clean and synchronized; MySQL remains healthy and loopback-only; both game servers remain stopped; the private updater directory remains empty; and the verified baseline backup still passes all checksum and gzip integrity checks.
+- Inspected the pinned core's startup scripts and direct `SIGINT`/`SIGTERM` handling, the installed runtime layout, host systemd state, owner permissions, journal access, and current boot-user behavior.
+- Selected two small native system services plus a grouping target over plain background scripts, user services, and the repository's broad service-manager framework.
+- Defined manual-on-demand startup, auth-before-world ordering, reverse graceful shutdown, execution as `ditrain`, five-minute stop timeouts, and crash-only automatic restart.
+- Documented start, stop, status, logs, full and selective restarts, failure behavior, and later boot enable/disable commands in `ops/README.md`.
+- Verified the tracked unit definitions with `systemd-analyze verify` without reading private configuration or starting either server.
+- Installation into `/etc/systemd/system` remains pending the owner's interactive sudo authentication; boot startup remains disabled.

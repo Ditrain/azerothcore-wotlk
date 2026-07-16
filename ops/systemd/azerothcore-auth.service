@@ -1,0 +1,18 @@
+[Unit]
+Description=AzerothCore PlayerBots authentication server
+Requires=mysql.service
+After=mysql.service network-online.target
+Wants=network-online.target
+PartOf=azerothcore.target
+
+[Service]
+Type=simple
+User=ditrain
+Group=ditrain
+WorkingDirectory=/mnt/data/wow-server/source/env/dist/bin
+ExecStart=/mnt/data/wow-server/source/env/dist/bin/authserver --config /mnt/data/wow-server/source/env/dist/etc/authserver.conf
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=5min
+UMask=0027

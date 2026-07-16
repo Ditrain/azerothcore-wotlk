@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core and module foundation has been configured, compiled, verified, and installed. The native runtime and database-provisioning plan has been reviewed and simplified for a trusted two-to-three-player household deployment. Runtime configuration, database installation and provisioning, client-data extraction, server startup, and gameplay customization have not begun.
+The reproducible native PlayerBots core and module foundation has been configured, compiled, verified, and installed. Native MySQL 8.0, the four empty AzerothCore databases, the scoped application account, and private runtime configuration are installed and verified for a trusted two-to-three-player household deployment. Repository SQL has not been applied, client data has not been extracted, neither game server has been started, and gameplay customization has not begun.
 
 ## Repository Model
 
@@ -48,6 +48,10 @@ The active core PlayerBots database updater uses `data/sql/playerbots/base/`. Th
 - Server source: `/mnt/data/wow-server/source`
 - Native build directory: `/mnt/data/wow-server/build/playerbots-release-gcc13`
 - Native install prefix: `/mnt/data/wow-server/source/env/dist`
+- Runtime root: `/mnt/data/wow-server/runtime`
+- Planned extracted-data directory: `/mnt/data/wow-server/runtime/data`
+- Runtime log directory: `/mnt/data/wow-server/runtime/logs`
+- Private updater temporary directory: `/mnt/data/wow-server/runtime/tmp`
 - Previous upstream build and accessible data directories were reviewed; the stopped Docker client-data volume remains unverified because its contents require elevated filesystem access.
 - The PlayerBots-native build is isolated from previous upstream output and from the native default build location under `source/var/build`.
 - `/mnt/data/wow-server/data/Data` contains raw enUS client MPQ data, not extracted server-side `dbc`, `maps`, `vmaps`, or `mmaps` directories.
@@ -79,7 +83,20 @@ Verified native Ubuntu build toolchain:
 - Readline development library 8.2
 - ncurses development library 6.4
 
-All verified versions meet the documented AzerothCore requirements. MySQL Server is not installed as a native service; only the client development library required for compilation is installed.
+All verified versions meet the documented AzerothCore requirements. Ubuntu MySQL Server and Client 8.0.46 are installed. The `mysql` service is enabled, active, and healthy; classic protocol port 3306 and X Protocol port 33060 listen only on `127.0.0.1`. A LAN connection probe to port 3306 fails as intended.
+
+Verified native database and runtime baseline:
+
+- Empty databases: `acore_auth`, `acore_characters`, `acore_world`, and `acore_playerbots`
+- Core database defaults: `utf8mb4` with `utf8mb4_unicode_ci`
+- PlayerBots database default: `utf8mb4` with `utf8mb4_general_ci`
+- Application identity: `acore@127.0.0.1`
+- Grants are limited to the four databases, without global privileges or `GRANT OPTION`.
+- The credential authenticates successfully over TCP loopback and is retained privately by the owner for runtime use.
+- Runtime files: `env/dist/etc/authserver.conf`, `env/dist/etc/worldserver.conf`, and `env/dist/etc/modules/playerbots.conf`
+- Runtime configuration files are ignored by Git, owned by `ditrain`, and mode `600`; installed `.conf.dist` templates remain unchanged.
+- Runtime root, data, and log directories are mode `750`; the updater temporary directory is mode `700` and was empty at closeout.
+- Explicit runtime paths use the native source directory, `/usr/bin/mysql`, and the runtime data, log, and private temporary directories above.
 
 ## Reviewed Native Runtime and Database Plan
 
@@ -125,6 +142,11 @@ Current updater evidence:
 - Installed and verified the native binaries and configuration templates without configuring databases, extracting client data, or starting either server.
 - Defined and reviewed the native runtime and database-provisioning plan against the current core and PlayerBots updater implementation.
 - Simplified the plan to match the trusted household deployment: one loopback-only MySQL service, one scoped application credential, four databases, built-in updates, private runtime configuration, and practical backups.
+- Installed and verified matching Ubuntu MySQL Server and Client 8.0.46 packages and confirmed that MySQL is healthy and exposed only on loopback.
+- Created the four empty AzerothCore databases with the repository-compatible character sets and collations.
+- Created and authenticated the single `acore@127.0.0.1` application account with privileges limited to the four databases and without global privileges or `GRANT OPTION`.
+- Created the untracked runtime configuration files from the installed templates, applied explicit native runtime paths, inserted the database credential through an owner-only hidden prompt, and restricted the secret-bearing files to mode `600`.
+- Created the runtime data, log, and private updater temporary directories with proportional owner-controlled permissions while leaving all installed `.conf.dist` templates unchanged.
 
 ## Lessons Learned
 
@@ -143,10 +165,13 @@ Current updater evidence:
 - Efficient reconnaissance starts with a bounded decision. Consolidate read-only checks, surface important findings early, and stop when further inspection is unlikely to change the selected mechanism.
 - The PlayerBots database-creation script is not appropriate for this deployment because it grants global privileges with `GRANT OPTION`; create the four databases and scoped grants explicitly instead.
 - The updater writes a fixed `mysql_ac.conf` containing the database password under `TempDir`; protect that directory and keep it out of Git.
+- Selecting the MariaDB driver in DBeaver identifies the client driver, not the database server installed on the target host; confirm the saved connection host and port before inferring server state.
+- `GRANT USAGE ON *.*` in `SHOW GRANTS` represents an account with no global privileges; the effective application rights are the four explicit database-scoped grants.
+- Insert operational secrets through an owner-controlled hidden prompt. Verify permissions and placeholder removal locally, and avoid displaying or fingerprinting credential-bearing configuration during remote review.
 
 ## Immediate Next Step
 
-Obtain explicit approval for one controlled implementation step: install Ubuntu MySQL 8.0 Server and its matching client only. Then verify the installed versions, service health, loopback-only network exposure, available updater/backup executables, repository state, and that neither game server has started. Stop and report before creating databases or users, writing runtime configuration, importing or updating SQL, extracting client data, or starting authserver/worldserver.
+Obtain explicit approval for one controlled implementation step: build and install the AzerothCore client-data extraction tools for the pinned PlayerBots source and module revisions. Then extract `dbc`, `maps`, `vmaps`, and `mmaps` from `/mnt/data/wow-server/data/Data` into `/mnt/data/wow-server/runtime/data`, verify completeness and compatibility, confirm neither game server was started, and stop before applying repository SQL or provisioning databases through the server updaters.
 
 ## Session Closeout Record
 
@@ -203,3 +228,17 @@ Obtain explicit approval for one controlled implementation step: install Ubuntu 
 - Corrected the initial over-engineered credential/service separation proposal after applying the real household threat and failure model.
 - Made no database, runtime configuration, client-data, package, or server-process changes during the review.
 - Selected MySQL server/client installation and verification as the next single approval-gated step.
+
+### 2026-07-15 — Native MySQL and private runtime baseline
+
+- Reconfirmed parent `custom` at `b84de197e9b3774dbdb95b0a5be9def2181f3b64` and nested module `master` at `93aaea3de19243c09ce9ecb25627dc9671715eed`, both clean and synchronized before implementation.
+- Installed matching Ubuntu MySQL Server and Client 8.0.46 packages with administrator authentication supplied directly by the owner.
+- Verified the MySQL service is enabled, active, and healthy; ports 3306 and 33060 listen only on `127.0.0.1`, and a LAN probe to port 3306 fails.
+- Created empty `acore_auth`, `acore_characters`, `acore_world`, and `acore_playerbots` databases with their repository-compatible character sets and collations.
+- Created `acore@127.0.0.1`, verified TCP authentication, and confirmed its only effective privileges are scoped to the four databases without `GRANT OPTION`.
+- Did not execute either repository database-creation script and did not manually import base or update SQL.
+- Created `/mnt/data/wow-server/runtime/{data,logs,tmp}`; restricted `tmp` to mode `700` and the other runtime directories to mode `750`.
+- Created ignored runtime configuration files from the installed `.conf.dist` templates, set explicit source, MySQL executable, data, log, and private temporary paths, and restricted the files to mode `600`.
+- The owner inserted the saved application password through a hidden local prompt. Remote verification intentionally did not read, display, or fingerprint the credential.
+- Reconfirmed MySQL remained healthy, authserver and worldserver remained stopped, the private updater directory remained empty, installed templates remained intact, and both Git worktrees remained clean and synchronized.
+- Selected client-data extractor build, extraction, and verification as the next approval-gated step before any server-driven database provisioning.

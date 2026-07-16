@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, and the initial post-provisioning logical backup are installed and verified for a trusted two-to-three-player household deployment. Authserver and worldserver both completed their controlled first starts and graceful shutdowns; neither game server is currently running. The realm has 100 PlayerBots accounts and 1,000 bot characters available. Gameplay customization has not begun.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, and end-to-end LAN login path are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Neither game server is currently running. Gameplay customization has not begun.
 
 ## Repository Model
 
@@ -122,6 +122,16 @@ Verified initial logical backup:
 - All four SHA-256 checksums and gzip streams verified; all restored tables passed `mysqlcheck`; `restore_test=passed`
 - The bundle includes `BACKUP_METADATA.txt`, `SHA256SUMS`, and `RESTORE.txt`; the credential-free one-use creation script was removed after verification.
 
+Verified household LAN smoke test:
+
+- WoW 3.3.5a uses `set realmlist 192.168.0.154`; no PlayerBots-specific client patch is required.
+- Fresh authserver evidence advertised `AzerothCore` at `192.168.0.154:8085`; authserver listened on `3724` and worldserver on `8085`.
+- Worldserver reached the exact ready marker with all 1,000 bot characters available and 500 random bots prepared for login.
+- Owner account `DITRAIN` authenticated from the LAN, created and entered a character, saw other PlayerBots, invited one, and the bot accepted.
+- The mistakenly created `YOACCOUNT` account was deleted with the supported `account delete YOACCOUNT` console command; `DITRAIN` was retained.
+- Both servers then stopped gracefully, all four database pools closed, and the updater temporary directory was returned to empty mode-`700` state.
+- The fresh error log contained only a repeated missing waypoint-path warning for stock creature `Eye of Dar'Khan`; it did not affect readiness, login, bot visibility, or grouping and is not a foundation blocker.
+
 ## Reviewed Native Runtime and Database Plan
 
 The deployment is a trusted household LAN server for two or three family members. Operational choices should protect against credible failures--configuration mistakes, failed schema updates, accidental secret commits, unintended network exposure, and disk loss--without enterprise-style identity or secret-management complexity.
@@ -177,6 +187,7 @@ Current updater evidence:
 - Provisioned the characters, world, and dedicated PlayerBots databases through a controlled worldserver first start using only the built-in updaters.
 - Created and verified the official default population of 100 PlayerBots accounts and 1,000 bot characters, reached full worldserver readiness, and stopped worldserver gracefully after all queued database writes drained.
 - Created and independently verified the initial four-database logical backup on a separate physical disk, including a successful disposable-database restore test and matching source/restored table and critical row counts.
+- Completed an end-to-end LAN client smoke test through account login, character entry, visible PlayerBots activity, and successful bot grouping; removed the accidental test account and retained only the intended owner account.
 
 ## Lessons Learned
 
@@ -203,10 +214,11 @@ Current updater evidence:
 - A zero exit from `map_extractor` is not sufficient evidence by itself because a missing locale can also return zero; require the detected locale, client build, key files, counts, and compatible headers.
 - The pinned vmap extractor's successful raw output contains `Buildings/dir_bin` without a separate `Buildings/dir`; use its explicit completion message and the assembler's successful output rather than assuming both index names exist.
 - A backup is not verified merely because `mysqldump` exited successfully. Require protected storage on a separate device, per-file checksums, compression tests, an actual restore into uniquely named disposable databases, table checks, critical row-count comparisons, restore instructions, and cleanup verification.
+- Retained logs can make a current configuration appear stale. Preserve old logs under explicit archive names and use fresh logs when validating a changed or uncertain runtime endpoint.
 
 ## Immediate Next Step
 
-Obtain explicit approval for one controlled end-to-end household login smoke test. Reconfirm the pinned repositories, verified backup, runtime data and configuration metadata, MySQL loopback-only health, empty private updater directory, and stopped servers; then review the supported private account-creation and paired authserver/worldserver procedure. Create only the minimum owner-controlled test account through a hidden credential prompt, start both servers, verify LAN client login and visible PlayerBots behavior, stop both servers gracefully, and record the result before selecting the first gameplay-customization slice.
+Review and obtain explicit approval for one simple native server-operation step. Inspect the pinned runtime's current service expectations, then propose the smallest maintainable start/stop/status/log workflow for authserver and worldserver, including ordering, graceful shutdown, owner permissions, restart behavior, and whether household boot-time startup is actually desired. Do not introduce separate service identities or enterprise secret infrastructure without a concrete need, and do not begin gameplay customization during that operational step.
 
 ## Next Session Start Checklist
 
@@ -218,7 +230,8 @@ Before acting in a new session:
 - Do not read, display, hash, fingerprint, replace, or commit the secret-bearing `.conf` files. The saved application credential is already present; do not request the database password.
 - Reconfirm `/mnt/data/wow-server/runtime/data` contains the verified `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps` outputs with the recorded counts and owner-controlled permissions. Do not re-extract unless verification identifies a concrete incompatibility.
 - Preserve `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` as the verified pre-gameplay baseline. Before relying on or moving it, rerun `sha256sum -c SHA256SUMS` and the gzip integrity checks; do not overwrite it.
-- Treat the controlled end-to-end household login smoke test as the next approval-gated step. Review private account creation, paired server startup, acceptance criteria, and graceful shutdown before running it.
+- Preserve the owner account `DITRAIN` and never request, display, log, or document its password. The accidental `YOACCOUNT` account has been deleted.
+- Treat the simple native server-operation workflow as the next approval-gated step; inspect before choosing system services, user services, or a smaller scripted mechanism.
 - Do not rerun database creation scripts or manually import SQL; future schema changes continue through the pinned built-in updaters after a verified backup.
 - Preserve the verified day-one bot population: 100 bot accounts and 1,000 bot characters. Do not remove or regenerate it unless a concrete gameplay decision requires that change.
 - Do not begin gameplay customization until the provisioned native PlayerBots server is reproducibly ready and the initial backup milestone is complete.
@@ -326,3 +339,15 @@ Before acting in a new session:
 - Removed the disposable restore databases through the script's exit cleanup and removed the credential-free one-use backup script after successful verification.
 - Reconfirmed no partial backup remained, both game servers remained stopped, MySQL remained healthy and loopback-only, and the private updater directory remained empty.
 - Selected a controlled paired-server LAN login and visible-PlayerBots smoke test as the next approval-gated milestone before gameplay customization.
+
+### 2026-07-16 - End-to-end LAN login and PlayerBots smoke test
+
+- Reconfirmed the pinned repositories, verified backup checksums, stopped servers, loopback-only MySQL service, and empty private updater directory before startup.
+- Determined from fresh logs that realm ID 1 already advertised `192.168.0.154:8085`; a guarded one-row correction script correctly refused to change the already-correct row and was removed unused.
+- Started authserver and worldserver together, verified listeners on ports 3724 and 8085, reached the exact worldserver ready marker, and observed the configured bot population come online.
+- Used the unchanged WoW 3.3.5a client with `set realmlist 192.168.0.154`; no PlayerBots-specific client files were needed.
+- Verified the owner could log in with `DITRAIN`, create and enter a character, see PlayerBots, invite a bot, and receive the bot's group acceptance.
+- Identified account ID 101 `YOACCOUNT` as an accidental account and deleted exactly that account through the supported worldserver `account delete` command; retained `DITRAIN`.
+- Recorded the non-blocking stock `Eye of Dar'Khan` missing-waypoint warning for future triage rather than expanding the foundation scope.
+- Stopped worldserver and authserver gracefully, verified all four database pools closed, removed only the updater-created temporary credential remnant without reading it, and returned the private temporary directory to empty mode-`700` state.
+- Selected review of a proportional native server start/stop/status/log workflow as the next approval-gated operational step before gameplay customization.

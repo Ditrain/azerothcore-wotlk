@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, and the default PlayerBots population are installed and verified for a trusted two-to-three-player household deployment. Authserver and worldserver both completed their controlled first starts and graceful shutdowns; neither game server is currently running. The realm has 100 PlayerBots accounts and 1,000 bot characters available. The initial post-provisioning backup and gameplay customization have not begun.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, and the initial post-provisioning logical backup are installed and verified for a trusted two-to-three-player household deployment. Authserver and worldserver both completed their controlled first starts and graceful shutdowns; neither game server is currently running. The realm has 100 PlayerBots accounts and 1,000 bot characters available. Gameplay customization has not begun.
 
 ## Repository Model
 
@@ -110,6 +110,18 @@ Verified native database and runtime state:
 - First world initialization created 100 default PlayerBots accounts and 1,000 bot characters, reached the exact `(worldserver-daemon) ready...` marker, and produced an empty `Errors.log`.
 - Authserver and worldserver were stopped gracefully after verification; all four database pools closed and neither game server is currently running.
 
+Verified initial logical backup:
+
+- Bundle: `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` (94 MiB)
+- MySQL data device: `/dev/mapper/ubuntu--vg-ubuntu--lv` on the system disk
+- Backup device: `/dev/sdb1`, a separate physical disk mounted at `/mnt/data`
+- Protected ownership and permissions: backup root mode `750`; bundle mode `700`; files mode `600`; owner `ditrain`
+- Included compressed dumps: `acore_auth`, `acore_characters`, `acore_world`, and `acore_playerbots`
+- Source/restored table counts matched: auth 22, characters 111, world 313, and PlayerBots 30
+- Critical source/restored row counts matched: 100 auth accounts and 1,000 characters
+- All four SHA-256 checksums and gzip streams verified; all restored tables passed `mysqlcheck`; `restore_test=passed`
+- The bundle includes `BACKUP_METADATA.txt`, `SHA256SUMS`, and `RESTORE.txt`; the credential-free one-use creation script was removed after verification.
+
 ## Reviewed Native Runtime and Database Plan
 
 The deployment is a trusted household LAN server for two or three family members. Operational choices should protect against credible failures--configuration mistakes, failed schema updates, accidental secret commits, unintended network exposure, and disk loss--without enterprise-style identity or secret-management complexity.
@@ -164,6 +176,7 @@ Current updater evidence:
 - Provisioned the auth database through a controlled authserver first start, verified its database pool, and stopped it gracefully.
 - Provisioned the characters, world, and dedicated PlayerBots databases through a controlled worldserver first start using only the built-in updaters.
 - Created and verified the official default population of 100 PlayerBots accounts and 1,000 bot characters, reached full worldserver readiness, and stopped worldserver gracefully after all queued database writes drained.
+- Created and independently verified the initial four-database logical backup on a separate physical disk, including a successful disposable-database restore test and matching source/restored table and critical row counts.
 
 ## Lessons Learned
 
@@ -189,10 +202,11 @@ Current updater evidence:
 - The current map extractor also produces `Cameras`; preserve that directory under `DataDir` because the pinned worldserver loads cinematic camera assets from the extracted data path.
 - A zero exit from `map_extractor` is not sufficient evidence by itself because a missing locale can also return zero; require the detected locale, client build, key files, counts, and compatible headers.
 - The pinned vmap extractor's successful raw output contains `Buildings/dir_bin` without a separate `Buildings/dir`; use its explicit completion message and the assembler's successful output rather than assuming both index names exist.
+- A backup is not verified merely because `mysqldump` exited successfully. Require protected storage on a separate device, per-file checksums, compression tests, an actual restore into uniquely named disposable databases, table checks, critical row-count comparisons, restore instructions, and cleanup verification.
 
 ## Immediate Next Step
 
-Obtain explicit approval for one controlled post-provisioning logical-backup step. Reconfirm the pinned repositories, provisioned database/runtime state, MySQL loopback-only health, empty private updater directory, and stopped servers; then create a complete logical backup of all four databases in a protected staging location, verify its contents and restore procedure without exposing credentials, and place the durable copy on storage separate from MySQL's data directory. Do not begin gameplay customization until the backup milestone is complete.
+Obtain explicit approval for one controlled end-to-end household login smoke test. Reconfirm the pinned repositories, verified backup, runtime data and configuration metadata, MySQL loopback-only health, empty private updater directory, and stopped servers; then review the supported private account-creation and paired authserver/worldserver procedure. Create only the minimum owner-controlled test account through a hidden credential prompt, start both servers, verify LAN client login and visible PlayerBots behavior, stop both servers gracefully, and record the result before selecting the first gameplay-customization slice.
 
 ## Next Session Start Checklist
 
@@ -203,7 +217,8 @@ Before acting in a new session:
 - Reconfirm MySQL is healthy and bound only to loopback, neither game server is running, `/mnt/data/wow-server/runtime/tmp` is empty and mode `700`, and the three private runtime configuration files remain owned by `ditrain` and mode `600`.
 - Do not read, display, hash, fingerprint, replace, or commit the secret-bearing `.conf` files. The saved application credential is already present; do not request the database password.
 - Reconfirm `/mnt/data/wow-server/runtime/data` contains the verified `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps` outputs with the recorded counts and owner-controlled permissions. Do not re-extract unless verification identifies a concrete incompatibility.
-- Treat the initial post-provisioning logical backup as the next approval-gated step. Present its exact scope, protected paths, verification, retention, and restore-test plan before running it.
+- Preserve `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` as the verified pre-gameplay baseline. Before relying on or moving it, rerun `sha256sum -c SHA256SUMS` and the gzip integrity checks; do not overwrite it.
+- Treat the controlled end-to-end household login smoke test as the next approval-gated step. Review private account creation, paired server startup, acceptance criteria, and graceful shutdown before running it.
 - Do not rerun database creation scripts or manually import SQL; future schema changes continue through the pinned built-in updaters after a verified backup.
 - Preserve the verified day-one bot population: 100 bot accounts and 1,000 bot characters. Do not remove or regenerate it unless a concrete gameplay decision requires that change.
 - Do not begin gameplay customization until the provisioned native PlayerBots server is reproducibly ready and the initial backup milestone is complete.
@@ -300,3 +315,14 @@ Before acting in a new session:
 - Without reading it, restricted and removed the updater-created `mysql_ac.conf` remnant after each stopped-server phase; verified `/mnt/data/wow-server/runtime/tmp` is empty and mode `700` at closeout.
 - Reconfirmed MySQL is enabled, active, and loopback-only; private runtime files remain mode `600`; installed templates and server binaries remain unchanged; and the parent and nested module worktrees remain clean and synchronized.
 - Selected a complete, verified post-provisioning logical backup of all four databases as the next separate approval-gated step before gameplay customization.
+
+### 2026-07-16 - Verified initial logical backup
+
+- Reconfirmed the clean pinned repositories, stopped game servers, active loopback-only MySQL service, empty mode-`700` updater directory, matching MySQL 8.0.46 dump/restore tools, and available backup capacity.
+- Confirmed MySQL data resides on the system disk while `/mnt/data` resides on separate physical disk `/dev/sdb1`.
+- Created four compressed single-transaction logical dumps under `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` without reading or copying the saved application credential.
+- Verified all SHA-256 checksums and gzip streams and retained metadata plus concise restore instructions in the owner-only bundle.
+- Restored every dump into a uniquely named disposable database, ran table checks, matched source/restored table counts of 22 auth, 111 characters, 313 world, and 30 PlayerBots tables, and matched 100 auth accounts plus 1,000 characters.
+- Removed the disposable restore databases through the script's exit cleanup and removed the credential-free one-use backup script after successful verification.
+- Reconfirmed no partial backup remained, both game servers remained stopped, MySQL remained healthy and loopback-only, and the private updater directory remained empty.
+- Selected a controlled paired-server LAN login and visible-PlayerBots smoke test as the next approval-gated milestone before gameplay customization.

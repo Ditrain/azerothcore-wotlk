@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, end-to-end LAN login path, and manual native systemd operating workflow are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Neither game server is currently running. Gameplay customization has not begun.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, end-to-end LAN login path, and manual native systemd operating workflow are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Neither game server is currently running. Gameplay customization has not begun; a bounded pre-development module stack has been selected for compatibility review and installation one module at a time.
 
 ## Repository Model
 
@@ -153,6 +153,27 @@ Verified household LAN smoke test:
 - Both servers then stopped gracefully, all four database pools closed, and the updater temporary directory was returned to empty mode-`700` state.
 - The fresh error log contained only a repeated missing waypoint-path warning for stock creature `Eye of Dar'Khan`; it did not affect readiness, login, bot visibility, or grouping and is not a foundation blocker.
 
+## Selected Pre-Development Module Stack
+
+The owner wants a period of ordinary household play before custom gameplay development. The following community components are selected for staged compatibility review and installation; none was installed during the selection session:
+
+- Transmogrification: `azerothcore/mod-transmog`. This is the lowest-risk first candidate and should use its normal module build and built-in database-update path.
+- Auction-house population: `NathanHandley/mod-ah-bot-plus`. It was selected over the older stock AHBot because its configuration and pricing controls are more suitable for a small private realm. Use dedicated ordinary auction characters rather than PlayerBots, and review its current branch, database behavior, and PlayerBots compatibility before installation.
+- Living-world dialogue: `Hokken/mod-llm-chatter`, its matching Chatter Companion client addon, and the module's separate Python bridge on Ubuntu. The bridge should call LM Studio on the owner's Windows desktop over the private LAN; do not expose the inference API publicly. Disable overlapping stock PlayerBots chatter if required by the module to avoid duplicate dialogue.
+- Normal local dialogue model: `anthracite-org/magnum-v4-9b-gguf`, quantization `Q4_K_M`. It was selected as the roleplay-quality and GPU-headroom balance for the desktop RTX 4070 while WoW is running.
+- Dependable secondary local model: `ggml-org/gemma-4-12B-it-GGUF`, quantization `Q4_K_M`. Only one model needs to be loaded for normal play; compare response validity, latency, character distinction, repetition, fantasy-roleplay behavior, and WoW frame-time impact before final tuning.
+
+The initial local inference policy is one request at a time, Flash Attention enabled, conservative context and output limits, and restrained chatter frequency. The LLM supplies dialogue only: PlayerBots remains authoritative for combat, movement, questing, loot, and other gameplay decisions. The module's persistent identities, memories, backstories, event context, and selected NPC proximity conversations provide the two desired experiences--ambient living-world chatter and richer recurring party companions--without installing two competing LLM chat modules.
+
+Any Race/Any Class remains desired but is deliberately outside the initial module stack. The known community candidate, `heyitsbench/mod-arac`, requires server DBC changes and a client `Patch-A.MPQ` on every household client and has greater PlayerBots, trainer, spell, quest, form, pet, and resource compatibility risk. Audit it separately after the initial modules are stable and the owner has spent time playing.
+
+Installation policy:
+
+- Pin and record every module repository, branch, commit, upstream remote, license, and update path before integration.
+- Add, build, provision, configure, and smoke-test one module at a time, with a cohesive commit and rollback point for each.
+- Preserve the verified pre-gameplay baseline backup. Do not overwrite it; create a new separately named backup before the first module changes a database.
+- Never commit runtime secrets, LM Studio credentials, or secret-bearing `.conf` files. Keep inference traffic on the trusted private LAN.
+
 ## Reviewed Native Runtime and Database Plan
 
 The deployment is a trusted household LAN server for two or three family members. Operational choices should protect against credible failures--configuration mistakes, failed schema updates, accidental secret commits, unintended network exposure, and disk loss--without enterprise-style identity or secret-management complexity.
@@ -239,7 +260,7 @@ Current updater evidence:
 
 ## Immediate Next Step
 
-The stable reproducible foundation is complete. Obtain explicit approval before beginning the first gameplay-design increment: define measurable combat and progression targets and select one bounded starter-zone content slice for end-to-end redesign. Preserve the manual boot policy and verified operational baseline while that planning occurs.
+The stable reproducible foundation is complete, and custom gameplay development is intentionally deferred until after a period of play. In the next session, first reconfirm the verified baseline and inspect the current upstream state and compatibility requirements of the three selected server modules without installing them. Pin exact revisions and propose the smallest one-module implementation increment. `mod-transmog` is the preferred first installation candidate because it has the lowest expected interaction risk. Obtain approval before cloning a module into the canonical source tree, rebuilding, running database updates, changing runtime configuration, installing the client addon, or connecting the Ubuntu bridge to LM Studio.
 
 ## Next Session Start Checklist
 
@@ -252,10 +273,13 @@ Before acting in a new session:
 - Reconfirm `/mnt/data/wow-server/runtime/data` contains the verified `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps` outputs with the recorded counts and owner-controlled permissions. Do not re-extract unless verification identifies a concrete incompatibility.
 - Preserve `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` as the verified pre-gameplay baseline. Before relying on or moving it, rerun `sha256sum -c SHA256SUMS` and the gzip integrity checks; do not overwrite it.
 - Preserve the owner account `DITRAIN` and never request, display, log, or document its password. The accidental `YOACCOUNT` account has been deleted.
-- Treat the simple native server-operation workflow as the next approval-gated step; inspect before choosing system services, user services, or a smaller scripted mechanism.
+- Preserve the verified native systemd workflow: manual on-demand startup, boot startup disabled, services running as `ditrain`, and crash-only restart behavior.
 - Do not rerun database creation scripts or manually import SQL; future schema changes continue through the pinned built-in updaters after a verified backup.
 - Preserve the verified day-one bot population: 100 bot accounts and 1,000 bot characters. Do not remove or regenerate it unless a concrete gameplay decision requires that change.
-- Do not begin gameplay customization until the provisioned native PlayerBots server is reproducibly ready and the initial backup milestone is complete.
+- Treat the selected pre-development stack as a plan, not installed state. Review and pin `mod-transmog`, `mod-ah-bot-plus`, and `mod-llm-chatter` before changing the source tree.
+- Install and verify only one module per approved increment. Prefer `mod-transmog` first; preserve the verified baseline backup and create a new pre-module backup before database-changing installation.
+- Keep Any Race/Any Class deferred until its server-DBC, client-patch, PlayerBots, trainer, spell, quest, form, pet, and resource compatibility has been reviewed separately.
+- For the LLM increment, obtain the Windows desktop LAN address, exact LM Studio version, exact installed model identifiers, and the owner's preferred API-listening procedure. Do not request or record unrelated credentials.
 
 ## Session Closeout Record
 
@@ -394,3 +418,14 @@ Before acting in a new session:
 - Both services exited successfully with status `0`, no restart occurred, ports 3724 and 8085 closed, and no authserver or worldserver process remained.
 - Reconfirmed MySQL remained active and bound only to loopback, the private updater directory remained empty and mode `700`, all three AzerothCore units were inactive, and boot startup remained disabled.
 - Completed the stable native PlayerBots foundation and selected bounded gameplay-design planning as the next approval-gated phase.
+
+### 2026-07-16 - Pre-development module and local-LLM plan
+
+- Reconfirmed the parent `custom` branch at `a34678c1679f216c892af39e0737bcc3f9ae4a33`, reference `Playerbot` at `52f58186a53399e603c46c24977fe60fcaad7f9d`, and nested PlayerBots module at `93aaea3de19243c09ce9ecb25627dc9671715eed`, all clean and synchronized before documentation changes.
+- Reconfirmed MySQL is active with ports 3306 and 33060 bound only to loopback; authserver, worldserver, and `azerothcore.target` are inactive; boot startup remains disabled; and the private updater directory is empty and mode `700`.
+- Reverified all four baseline-backup checksums and gzip streams and reconfirmed its recorded `restore_test=passed` result without modifying the bundle.
+- Selected `azerothcore/mod-transmog`, `NathanHandley/mod-ah-bot-plus`, and `Hokken/mod-llm-chatter` plus its Chatter Companion addon and Ubuntu bridge as the initial play-before-development stack. No module was cloned, installed, built, configured, or provisioned.
+- Selected LM Studio on the Windows RTX 4070 over the private LAN, with Magnum v4 9B `Q4_K_M` as the normal gameplay model and Gemma 4 12B IT `Q4_K_M` as the dependable secondary model. The owner will install both models in LM Studio.
+- Chose one serialized inference request, conservative context/output limits, restrained chatter frequency, and measurement of response validity, latency, roleplay quality, repetition, and WoW frame times before increasing load.
+- Deferred Any Race/Any Class until a separate compatibility review because the known module requires server DBC changes and a client patch and may interact broadly with PlayerBots and class-specific game systems.
+- Selected read-only upstream compatibility review and exact revision pinning as the next step, followed by an approval-gated, one-module-at-a-time implementation beginning with transmogrification if the review supports it.

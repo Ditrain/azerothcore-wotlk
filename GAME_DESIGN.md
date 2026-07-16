@@ -15,6 +15,8 @@ This is a game distribution and systems-integration project, not a new MMORPG en
 - Create longer fights with readable tactical decisions instead of rapid enemy deletion.
 - Give zones strong identities through spawn ecology, camps, named enemies, mini-bosses, and loot.
 - Preserve a playable Azeroth foundation before introducing broad customization.
+- Spend meaningful time playing the stable foundation with carefully selected quality-of-life and living-world modules before beginning custom system development.
+- Make AI companions and selected world inhabitants feel distinct and socially present through lore-grounded dialogue, persistent identity, remembered shared events, and restrained ambient conversation.
 
 ## Encounter Direction
 
@@ -43,6 +45,19 @@ Prefer, in order:
 6. Core changes only when no maintainable alternative exists
 
 PlayerBots compatibility and the ability to absorb official upstream updates take priority over invasive customization.
+
+## Pre-Development Play Stack
+
+The first play period should add convenience and social texture without yet changing the project's combat, progression, encounter, or loot foundations:
+
+- Transmogrification provides appearance choice with low expected gameplay-system risk.
+- A configurable auction-house bot supports a useful private-realm economy without relying on a large human population.
+- LLM chatter provides two complementary experiences through one system: occasional ambient conversations among PlayerBots and eligible nearby NPCs, and deeper recurring companion dialogue shaped by persistent personalities, backstories, and memories.
+- Dialogue generation does not control combat, navigation, quests, loot, economy actions, or database mutation. Existing AzerothCore and PlayerBots systems remain authoritative for gameplay.
+- Chatter should favor memorable, divergent exchanges over message volume. Tune triggers, cooldowns, scene length, and concurrency to protect immersion, desktop gaming performance, and readable chat.
+- The normal local model is Magnum v4 9B `Q4_K_M`; Gemma 4 12B IT `Q4_K_M` is the dependable secondary option. Model selection remains reversible and should be based on integrated play evidence rather than prose demonstrations alone.
+
+Any Race/Any Class is a desired later option, not part of the initial play stack. Its client patch and broad class-system interactions require a separate compatibility and player-experience decision before adoption.
 
 ## Design Decision Method
 

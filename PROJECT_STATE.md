@@ -6,7 +6,7 @@ This document is the durable operational handoff for the custom AzerothCore Play
 
 ## Current Phase
 
-The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, end-to-end LAN login path, and manual native systemd operating workflow are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Neither game server is currently running. The first approved gameplay module increment, Transmog, is partially prepared: its canonical source is pinned and a clean build succeeded, but it has not been installed into the native prefix, configured, allowed to update any database, started, or smoke-tested. The verified pre-module backup and restore test remains the hard gate before those actions.
+The reproducible native PlayerBots core, module, extraction tools, MySQL 8.0 runtime, private configuration, WoW 3.3.5a server-side client data, all four database schemas, the default PlayerBots population, initial post-provisioning logical backup, end-to-end LAN login path, manual native systemd operating workflow, and first approved gameplay module increment are installed and verified for a trusted two-to-three-player household deployment. The owner account `DITRAIN` can authenticate, create and enter a character, see PlayerBots, and invite a bot that accepts the group invitation. The accidental `YOACCOUNT` account was deleted through the supported worldserver command. Transmog is pinned, restore-backed, installed, conservatively configured, database-verified, and smoke-tested. Neither game server is currently running; boot startup remains disabled and the private updater temporary directory is empty.
 
 ## Repository Model
 
@@ -67,7 +67,7 @@ Verified native build configuration:
 - Git revision embedding, jemalloc, and VMAP checks enabled; dynamic linking, core debug, and gperftools disabled
 - Build parallelism limited to three jobs on the four-core, 15 GiB RAM host
 - Installed binaries: `env/dist/bin/authserver` and `env/dist/bin/worldserver`
-- Installed configuration templates: `env/dist/etc/{authserver,worldserver}.conf.dist` and `env/dist/etc/modules/playerbots.conf.dist`
+- Installed configuration templates: `env/dist/etc/{authserver,worldserver}.conf.dist` and `env/dist/etc/modules/{playerbots,transmog}.conf.dist`
 
 Verified native extraction-tool configuration:
 
@@ -102,8 +102,8 @@ Verified native database and runtime state:
 - Application identity: `acore@127.0.0.1`
 - Grants are limited to the four databases, without global privileges or `GRANT OPTION`.
 - The credential authenticates successfully over TCP loopback and is retained privately by the owner for runtime use.
-- Runtime files: `env/dist/etc/authserver.conf`, `env/dist/etc/worldserver.conf`, and `env/dist/etc/modules/playerbots.conf`
-- Runtime configuration files are ignored by Git, owned by `ditrain`, and mode `600`; installed `.conf.dist` templates remain unchanged.
+- Runtime files: `env/dist/etc/authserver.conf`, `env/dist/etc/worldserver.conf`, and `env/dist/etc/modules/{playerbots,transmog}.conf`
+- Runtime configuration files are ignored by Git, owned by `ditrain`, and mode `600`. The core and PlayerBots files contain secrets and must never be read or fingerprinted remotely; the Transmog file is non-secret. Installed `.conf.dist` templates remain unchanged.
 - Runtime root, data, and log directories are mode `750`; the updater temporary directory is mode `700` and was empty at closeout.
 - Explicit runtime paths use the native source directory, `/usr/bin/mysql`, and the runtime data, log, and private temporary directories above.
 - The built-in updater initialized all four schemas and applied the pinned core, module, and PlayerBots updates without manual SQL imports.
@@ -167,7 +167,7 @@ The initial local inference policy is one request at a time, Flash Attention ena
 
 The owner later identified additional roleplay-model candidates because Magnum has not been updated in LM Studio for almost two years: Mistral-Nemo-12B-Celeste v1.9, Fimbulvetr-11B-v2, MythoMax L2 13B, roleplay-tuned or uncensored Llama 3.x 8B-to-13B variants, Mistral NeMo/Small 12B variants, and Chronos Hermes 13B-class models. Treat Magnum as a prior baseline, not a final decision. During the later LLM increment, verify exact current model repositories and LM Studio compatibility, then benchmark one loaded model at a time on the RTX 4070 for valid-response rate, latency, persona separation, repetition, lore/fantasy behavior, and WoW frame-time impact before selecting the normal-play model and quantization.
 
-## Transmog Increment - Prepared, Not Installed
+## Transmog Increment - Installed and Verified
 
 - Approval: the owner explicitly approved the one-module Transmog increment.
 - Canonical repository: `https://github.com/azerothcore/mod-transmog.git`
@@ -178,11 +178,14 @@ The owner later identified additional roleplay-model candidates because Magnum h
 - License: AGPL-3.0.
 - Compatibility/build evidence: the pinned module meets the inspected core requirements; CMake discovered both `mod-playerbots` and `mod-transmog` as static modules. A warning-enabled clean Release build completed successfully with three jobs on 2026-07-16. The build-directory worldserver is a valid x86-64 ELF executable containing a Transmogrification symbol; its SHA-256 is `bd6d2f2d1d21667601ec230ddbdfa215e7166fa0ae4527555bbe2fe2900ec854`.
 - Database scope reviewed before approval: auth table `acore_cms_subscriptions`; character tables `custom_transmogrification`, `custom_transmogrification_sets`, and `custom_unlocked_appearances`; world content including creatures `190010`/`190011`, spell `200100`, item entries `57575`/`57576`, text entries `601083`/`601084`, and related commands, strings, and locales.
-- PlayerBots risk control: begin with `Transmogrification.UseCollectionSystem = 0`, `Transmogrification.RetroActiveAppearances = 0`, and `Transmogrification.EnablePlus = 0`; do not permanently place module NPCs during the first smoke test. Reconfirm exact key names against the pinned template before creating the non-secret module runtime configuration.
-- Backup attempts: four logical dumps were produced and passed gzip verification, but the disposable restore test failed because its MySQL data directory had been created before `mysqld --initialize-insecure`. The attempt's cleanup removed the incomplete bundle and disposable runtime data. The helper was corrected and redeployed as `/tmp/codex-transmog-backup-sudo.sh`; `bash -n` passes. No `pre-transmog-*` backup currently exists.
-- Authorization boundary: unattended `sudo` is not available. The corrected helper requires the owner to authorize sudo locally. Never request or handle the owner or database password.
-- Live-state proof after the build: installed authserver and worldserver hashes remain the verified baseline values `24a5cdf52c7542b985cc4685f92537293772063cf7ae689376e8725f1fc029dc` and `114971bce2601e4b42aa4f83c1feb58168854d2b981a9c7de8291677fbf27a39`. All AzerothCore units remain inactive, boot startup remains disabled, and `/mnt/data/wow-server/runtime/tmp` is empty. No database or runtime configuration was changed.
-- Still required: successful separately named dump and disposable restore test with `restore_test=passed`; independent checksum/gzip/metadata verification; install the already-built binaries and template; create the conservative untracked `transmog.conf`; start through the supported workflow so the built-in updater applies module SQL; verify exact schema/content changes; perform runtime and PlayerBots smoke tests; stop cleanly; update this document; then create one cohesive parent documentation commit and push. Do not call this module installed until every item passes.
+- Verified pre-module backup: `/mnt/data/wow-server/backups/pre-transmog-20260718T155801Z`. All four dumps exist with owner-only permissions; all checksum and gzip checks pass; isolated MySQL restore, table checks, and source/restored counts pass; metadata reports `restore_test=passed`; and all disposable data was removed. Source/restored counts were 22 auth tables, 111 character tables, 313 world tables, 30 PlayerBots tables, 101 accounts, and 1,001 characters. The protected initial baseline backup remains unchanged.
+- The first two corrected restore attempts failed safely and cleaned up because the disposable `mysqld` first lacked parent traversal and then was blocked by AppArmor. The successful helper used the profile-approved `/var/lib/mysql-files/**` path without disabling AppArmor and was removed after verification.
+- Installed artifacts: `env/dist/bin/{authserver,worldserver}` and `env/dist/etc/modules/transmog.conf.dist`. Installed SHA-256 values are authserver `38a0c75b0036fd0b9b07b8c60f142c61ab26e0dc5e231345a791fc3890c4e542` and worldserver `c240237ed1916bfb0c1989211ada40c49bee069b8b8769adaf09d2fe1b1317eb`; the installed worldserver contains the Transmogrification symbol.
+- Conservative runtime configuration: ignored owner-only `env/dist/etc/modules/transmog.conf`, derived from the pinned template with only `Transmogrification.UseCollectionSystem = 0` and `Transmogrification.RetroActiveAppearances = 0` changed; `Transmogrification.EnablePlus = 0` remains the explicit pinned default. No permanent Transmog NPC is placed.
+- Built-in updater verification: auth table `acore_cms_subscriptions`; character tables `custom_transmogrification`, `custom_transmogrification_sets`, and `custom_unlocked_appearances`; two world creature templates with zero permanent spawns; spell `200100`; item entries `57575`/`57576`; text entries `601083`/`601084`; 45 module strings; eight commands; and exact auth, character, and world module update records. New Transmog player-data tables were empty at verification.
+- Runtime smoke test: both supported systemd services started without restart, ports 3724/8085 listened, worldserver reached its exact readiness marker, `DITRAIN` logged in, PlayerBots were visible and accepted a group invitation, and `.transmog 0` / `.transmog 1` returned the expected hide/show responses. Shutdown reversed service order, drained queued PlayerBots work, closed all five database pools, and exited both services with status `0`.
+- Known limitation: in this pinned module, named Transmog subcommands registered after the empty root handler are routed to its boolean parser; `.transmog interface off` therefore reports that `Interface` is not a valid boolean. The root hide/show command works. `DITRAIN` does not have the GM RBAC permission for `.npc add temp`, so the temporary gossip-NPC path was not exercised. This is non-blocking for the verified conservative command/database integration but should be reviewed before relying on those subcommands or an NPC-free interface workflow.
+- Final runtime state: MySQL is healthy and loopback-only; all AzerothCore units are inactive; boot startup is disabled; ports 3724/8085 are closed; `/mnt/data/wow-server/runtime/tmp` is empty and mode `700`; and the one-use backup/database-verification helpers were removed. `Errors.log` contains only the accepted stock `Eye of Dar'Khan` missing-waypoint warning.
 
 Any Race/Any Class remains desired but is deliberately outside the initial module stack. The known community candidate, `heyitsbench/mod-arac`, requires server DBC changes and a client `Patch-A.MPQ` on every household client and has greater PlayerBots, trainer, spell, quest, form, pet, and resource compatibility risk. Audit it separately after the initial modules are stable and the owner has spent time playing.
 
@@ -249,6 +252,7 @@ Current updater evidence:
 - Created and verified the official default population of 100 PlayerBots accounts and 1,000 bot characters, reached full worldserver readiness, and stopped worldserver gracefully after all queued database writes drained.
 - Created and independently verified the initial four-database logical backup on a separate physical disk, including a successful disposable-database restore test and matching source/restored table and critical row counts.
 - Completed an end-to-end LAN client smoke test through account login, character entry, visible PlayerBots activity, and successful bot grouping; removed the accidental test account and retained only the intended owner account.
+- Installed and verified the pinned Transmog module through a separate restore-tested pre-module backup, conservative configuration, built-in database updates, database inspection, LAN/PlayerBots/Transmog command smoke tests, and graceful supported shutdown.
 
 ## Lessons Learned
 
@@ -276,27 +280,30 @@ Current updater evidence:
 - The pinned vmap extractor's successful raw output contains `Buildings/dir_bin` without a separate `Buildings/dir`; use its explicit completion message and the assembler's successful output rather than assuming both index names exist.
 - A backup is not verified merely because `mysqldump` exited successfully. Require protected storage on a separate device, per-file checksums, compression tests, an actual restore into uniquely named disposable databases, table checks, critical row-count comparisons, restore instructions, and cleanup verification.
 - Retained logs can make a current configuration appear stale. Preserve old logs under explicit archive names and use fresh logs when validating a changed or uncertain runtime endpoint.
+- Ubuntu AppArmor confines `/usr/sbin/mysqld` even when ordinary ownership and traversal permissions are correct. Disposable restore tests should use an explicitly permitted path such as `/var/lib/mysql-files/**`; do not disable the profile to accommodate an arbitrary path.
+- In the pinned Transmog command table, the empty root handler precedes several named player subcommands. Those later names can be consumed as boolean arguments; verify command routing against the live core instead of assuming every database command row is reachable.
+- A module can be integrated and smoke-tested without permanent world placement: preserve zero creature spawns until the owner makes a separate placement decision. Account RBAC still controls whether an in-game temporary-spawn command is available.
 
 ## Immediate Next Step
 
-Resume the already approved Transmog increment; do not begin Auction House, Chatter, Any Race/Any Class, or custom gameplay work. First reconfirm the parent and nested repository revisions and the stopped/clean runtime. Then have the owner locally authorize and run the corrected `/tmp/codex-transmog-backup-sudo.sh`. Require a separately named `pre-transmog-*` bundle with all four checksum and gzip checks passing and `restore_test=passed`; independently verify it and confirm cleanup before installing anything. If and only if that gate passes, install the successful build, create the conservative non-secret Transmog module configuration, run the built-in updater through a controlled supported startup, verify database effects and PlayerBots behavior, stop cleanly, document the completed increment, commit, and push.
+Keep the verified Transmog increment stopped and available for ordinary household play. Before another module increment, review the observed Transmog command-routing limitation and gather play evidence on appearance usability under the collection-disabled, Plus-disabled, no-permanent-NPC configuration. Do not begin Auction House, Chatter, Any Race/Any Class, or custom gameplay work without a separate bounded review and explicit approval.
 
 ## Next Session Start Checklist
 
 Before acting in a new session:
 
 - Read `AGENTS.md`, `PROJECT_PRINCIPLES.md`, `PROJECT_STATE.md`, and `GAME_DESIGN.md` completely.
-- Work on `custom`; verify it is clean and synchronized with `origin/custom`. Verify local `Playerbot` remains synchronized with `upstream/Playerbot` at `52f58186a53399e603c46c24977fe60fcaad7f9d`, and nested `modules/mod-playerbots` `master` remains synchronized with `origin/master` at `93aaea3de19243c09ce9ecb25627dc9671715eed`.
-- Reconfirm MySQL is healthy and bound only to loopback, neither game server is running, `/mnt/data/wow-server/runtime/tmp` is empty and mode `700`, and the three private runtime configuration files remain owned by `ditrain` and mode `600`.
+- Work on `custom`; verify it is clean and synchronized with `origin/custom`. Preserve the tested local `Playerbot` pin `52f58186a53399e603c46c24977fe60fcaad7f9d` and PlayerBots module pin `93aaea3de19243c09ce9ecb25627dc9671715eed` until a separate upgrade increment. At 2026-07-18 closeout, refreshed upstream refs had advanced to core `bf25eae704f5fa2cb6c9fc2458f96ec099c03a8e` and module `3fa1c1e49f8f1324b72461e576bce7c89b0a6521`; do not fold that drift into unrelated work.
+- Reconfirm MySQL is healthy and bound only to loopback, neither game server is running, `/mnt/data/wow-server/runtime/tmp` is empty and mode `700`, and all four runtime configuration files remain owned by `ditrain` and mode `600`. Treat only `transmog.conf` as non-secret.
 - Do not read, display, hash, fingerprint, replace, or commit the secret-bearing `.conf` files. The saved application credential is already present; do not request the database password.
 - Reconfirm `/mnt/data/wow-server/runtime/data` contains the verified `dbc`, `maps`, `Cameras`, `vmaps`, and `mmaps` outputs with the recorded counts and owner-controlled permissions. Do not re-extract unless verification identifies a concrete incompatibility.
-- Preserve `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` as the verified pre-gameplay baseline. Before relying on or moving it, rerun `sha256sum -c SHA256SUMS` and the gzip integrity checks; do not overwrite it.
+- Preserve `/mnt/data/wow-server/backups/initial-playerbots-20260716T142210Z` as the verified pre-gameplay baseline and `/mnt/data/wow-server/backups/pre-transmog-20260718T155801Z` as the verified pre-module rollback point. Before relying on or moving either bundle, rerun `sha256sum -c SHA256SUMS` and the gzip integrity checks; do not overwrite them.
 - Preserve the owner account `DITRAIN` and never request, display, log, or document its password. The accidental `YOACCOUNT` account has been deleted.
 - Preserve the verified native systemd workflow: manual on-demand startup, boot startup disabled, services running as `ditrain`, and crash-only restart behavior.
 - Do not rerun database creation scripts or manually import SQL; future schema changes continue through the pinned built-in updaters after a verified backup.
 - Preserve the verified day-one bot population: 100 bot accounts and 1,000 bot characters. Do not remove or regenerate it unless a concrete gameplay decision requires that change.
-- Treat the selected pre-development stack as planned work except for the partially prepared Transmog increment. Transmog source is present and clean-built but is not installed or live; `mod-ah-bot-plus` and `mod-llm-chatter` remain future increments.
-- Install and verify only one module per approved increment. Continue only Transmog; preserve the verified baseline backup and create a new verified pre-Transmog backup before installation can reach database updates.
+- Treat Transmog as installed and verified at pinned commit `33ac64b2c305eb1b6fbc97310a7ecbc30c2ba4ef`; preserve its conservative runtime options and zero permanent NPC spawns. `mod-ah-bot-plus` and `mod-llm-chatter` remain uninstalled future increments.
+- Install and verify only one module per separately approved increment, with a new restore-tested backup before each database-changing installation.
 - Keep Any Race/Any Class deferred until its server-DBC, client-patch, PlayerBots, trainer, spell, quest, form, pet, and resource compatibility has been reviewed separately.
 - For the LLM increment, obtain the Windows desktop LAN address, exact LM Studio version, exact installed model identifiers, and the owner's preferred API-listening procedure. Do not request or record unrelated credentials.
 
@@ -460,3 +467,12 @@ Before acting in a new session:
 - Did not install the new binary or template, create or alter runtime configuration, run database updates, start authserver/worldserver, or perform a gameplay smoke test.
 - Reconfirmed the installed server hashes still match the pre-Transmog baseline, all AzerothCore units are inactive, the target remains manual, and the private updater directory is empty.
 - Recorded the owner's newer roleplay-model candidates for later controlled benchmarking; made no LM Studio, addon, bridge, Chatter, or network changes.
+
+### 2026-07-18 - Transmog increment installed and verified
+
+- Re-read all four governing documents and reconfirmed parent `custom` at `ab3d42afdb579c5557268cfcff3b4756b62ddde2`, pinned local `Playerbot` at `52f58186a53399e603c46c24977fe60fcaad7f9d`, PlayerBots module at `93aaea3de19243c09ce9ecb25627dc9671715eed`, and Transmog at `33ac64b2c305eb1b6fbc97310a7ecbc30c2ba4ef`. Refreshed official PlayerBots refs had advanced, so the already tested pins were preserved rather than mixing an upgrade into this increment.
+- Created and independently verified `/mnt/data/wow-server/backups/pre-transmog-20260718T155801Z`: four protected compressed dumps, passing checksums and gzip tests, successful isolated restore and table checks, matching source/restored table and critical row counts, `restore_test=passed`, and complete disposable-data cleanup. AppArmor remained enabled; the successful disposable server used `/var/lib/mysql-files/**`.
+- Installed the clean Transmog-enabled Release artifacts and public template through CMake. Created ignored owner-only `transmog.conf` with the collection system, retroactive appearances, and Plus disabled; placed no permanent Transmog NPC.
+- Started through `azerothcore.target`, let the built-in updater apply the pinned module SQL, and verified exact auth, character, and world objects plus updater records. Confirmed zero permanent Transmog creature spawns and empty new player-data tables.
+- Reached the exact worldserver ready marker with no restart or fatal error. Verified `DITRAIN` login, visible PlayerBots, accepted bot grouping, and working `.transmog 0` / `.transmog 1` hide/show responses. Recorded the pinned module's named-subcommand routing limitation and the owner's lack of temporary-NPC RBAC permission without expanding scope or changing permissions.
+- Stopped through the supported target; worldserver stopped before authserver, all five database pools closed, both services exited with status `0`, game listeners closed, and boot startup remained disabled. Removed the updater-created credential remnant without reading it, emptied the mode-`700` runtime temporary directory, and removed the credential-free one-use helpers.

@@ -1,0 +1,82 @@
+From 3029c1f2444e66493327f6a81d8bf24157bcf904 Mon Sep 17 00:00:00 2001
+From: Ditrain <dtraingregory@gmail.com>
+Date: Sun, 19 Jul 2026 15:44:20 -0400
+Subject: [PATCH] Support local OpenAI endpoints in health check
+
+---
+ tools/chatter_healthcheck.py | 30 ++++++++++++++++++++++++------
+ 1 file changed, 24 insertions(+), 6 deletions(-)
+
+diff --git a/tools/chatter_healthcheck.py b/tools/chatter_healthcheck.py
+index cbfeef6..04803bb 100644
+--- a/tools/chatter_healthcheck.py
++++ b/tools/chatter_healthcheck.py
+@@ -493,9 +493,9 @@ def _probe_anthropic(config, model):
+     return resp.content[0].text.strip()
+ 
+ 
+-def _probe_openai_compatible(client, model):
++def _probe_openai_compatible(client, model, reasoning_effort=''):
+     """Make a minimal OpenAI-compatible call; text or raises."""
+-    resp = client.chat.completions.create(
++    request_kwargs = dict(
+         model=model,
+         max_tokens=5,
+         messages=[{
+@@ -503,6 +503,9 @@ def _probe_openai_compatible(client, model):
+             'content': 'Reply with the single word: OK',
+         }],
+     )
++    if reasoning_effort:
++        request_kwargs['reasoning_effort'] = reasoning_effort
++    resp = client.chat.completions.create(**request_kwargs)
+     content = resp.choices[0].message.content
+     if isinstance(content, str):
+         return content.strip()
+@@ -522,9 +525,13 @@ def _build_openai_compatible_client(config, provider):
+             api_key='ollama',
+         )
+     if provider == 'openai':
+-        return openai.OpenAI(
+-            api_key=config.get('LLMChatter.OpenAI.ApiKey', ''),
+-        )
++        kwargs = {
++            'api_key': config.get('LLMChatter.OpenAI.ApiKey', ''),
++        }
++        base_url = config.get('LLMChatter.OpenAI.BaseUrl', '').strip()
++        if base_url:
++            kwargs['base_url'] = base_url
++        return openai.OpenAI(**kwargs)
+     if provider == 'google':
+         return openai.OpenAI(
+             api_key=config.get('LLMChatter.Google.ApiKey', ''),
+@@ -564,6 +571,10 @@ def _check_llm_probe(config):
+         endpoint = config.get(
+             'LLMChatter.OpenRouter.BaseUrl', OPENROUTER_BASE_URL
+         )
++    elif provider == 'openai':
++        endpoint = config.get(
++            'LLMChatter.OpenAI.BaseUrl', ''
++        ) or "the provider API"
+     else:
+         endpoint = "the provider API"
+ 
+@@ -574,7 +585,14 @@ def _check_llm_probe(config):
+             client = _build_openai_compatible_client(
+                 config, provider
+             )
+-            text = _probe_openai_compatible(client, model)
++            reasoning_effort = ''
++            if provider == 'openai':
++                reasoning_effort = config.get(
++                    'LLMChatter.OpenAI.ReasoningEffort', ''
++                ).strip()
++            text = _probe_openai_compatible(
++                client, model, reasoning_effort
++            )
+ 
+         if text:
+             return _result(
+-- 
+2.54.0.windows.1
+

@@ -135,6 +135,42 @@ schema migration. The verified pre-AHBot four-database backup is the
 last-resort rollback because restoring it also discards every legitimate
 post-backup account, character, mail, auction, and gameplay change.
 
+## LLM chatter bridge
+
+The bridge uses the ignored mode-`600`
+`env/dist/etc/modules/mod_llm_chatter.conf`, an isolated Python environment
+under `/mnt/data/wow-server/runtime/mod-llm-chatter/`, a dedicated
+loopback-only database identity, and LM Studio on the private LAN. Full request
+logging is disabled. Never print, copy, hash, or commit the runtime config.
+
+The current no-boot workflow uses the static user unit while the root-owned
+system unit remains installed but inactive:
+
+```bash
+systemctl --user start azerothcore-llm-chatter.service
+systemctl --user status --no-pager azerothcore-llm-chatter.service
+journalctl --user -u azerothcore-llm-chatter.service -n 100 --no-pager
+systemctl --user stop azerothcore-llm-chatter.service
+```
+
+`Linger=no`, so this is deliberately not a boot service. Start the bridge
+before `wow-start` after a reboot or full logout. Stop the game pair before
+stopping the bridge.
+
+At the next convenient privileged maintenance window, consolidate on the
+already-installed static system service in one sequence:
+
+```bash
+systemctl --user stop azerothcore-llm-chatter.service
+sudo systemctl start azerothcore-llm-chatter.service
+systemctl status --no-pager azerothcore-llm-chatter.service
+```
+
+After the system service is confirmed healthy, remove the duplicate user unit
+and reload the user manager. Do not enable either unit at boot unless the owner
+changes the manual-start policy. Keep the Windows firewall rule restricted to
+Ubuntu `192.168.0.154`; do not expose MySQL or configure a cloud API.
+
 These units intentionally do not add tmux or an attachable live console. Use
 supported in-game administrative commands when appropriate. If an attachable
 server console becomes a concrete need, add it as a separate reviewed step

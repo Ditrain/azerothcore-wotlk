@@ -1,0 +1,418 @@
+From 93843b8125894d87674771117622018b43a2f680 Mon Sep 17 00:00:00 2001
+From: Ditrain <dtraingregory@gmail.com>
+Date: Sun, 19 Jul 2026 14:19:10 -0400
+Subject: [PATCH] Add local OpenAI-compatible endpoint controls
+
+---
+ README.md                                     |  12 ++
+ conf/mod_llm_chatter.conf.dist                |  14 ++
+ tools/chatter_llm.py                          |  32 ++-
+ tools/screenshot_agent.py                     |  27 ++-
+ .../tests/test_openai_compatible_endpoint.py  | 195 ++++++++++++++++++
+ 5 files changed, 272 insertions(+), 8 deletions(-)
+ create mode 100644 tools/tests/test_openai_compatible_endpoint.py
+
+diff --git a/README.md b/README.md
+index c43b56a..dee58aa 100644
+--- a/README.md
++++ b/README.md
+@@ -362,6 +362,18 @@ file comments for the full list of tunable keys.
+ 
+ ## Setup
+ 
++For a local OpenAI-compatible endpoint such as LM Studio, use the
++`openai` provider with a non-secret placeholder API key, the local
++base URL, and any reasoning control supported by that endpoint:
++
++```ini
++LLMChatter.Provider = openai
++LLMChatter.Model = qwen/qwen3.5-9b
++LLMChatter.OpenAI.ApiKey = lm-studio
++LLMChatter.OpenAI.BaseUrl = http://192.168.1.10:1234/v1
++LLMChatter.OpenAI.ReasoningEffort = none
++```
++
+ ### Important: Disable Default Bot Chat
+ 
+ This module **replaces** built-in playerbot chat. Add to `playerbots.conf`:
+diff --git a/conf/mod_llm_chatter.conf.dist b/conf/mod_llm_chatter.conf.dist
+index d0c05db..9855247 100644
+--- a/conf/mod_llm_chatter.conf.dist
++++ b/conf/mod_llm_chatter.conf.dist
+@@ -284,6 +284,20 @@ LLMChatter.Anthropic.ApiKey = sk-ant-xxxxx
+ #
+ LLMChatter.OpenAI.ApiKey = sk-xxxxx
+ 
++#
++#   LLMChatter.OpenAI.BaseUrl
++#       Optional OpenAI-compatible API base URL. Leave empty for OpenAI.
++#       Example for LM Studio: http://192.168.1.10:1234/v1
++#
++LLMChatter.OpenAI.BaseUrl =
++
++#
++#   LLMChatter.OpenAI.ReasoningEffort
++#       Optional OpenAI-compatible reasoning effort. Leave empty to omit.
++#       LM Studio reasoning models may accept "none" for short chatter.
++#
++LLMChatter.OpenAI.ReasoningEffort =
++
+ ###############################################################################
+ # GOOGLE SETTINGS [BRIDGE] (only needed if Provider = google)
+ ###############################################################################
+diff --git a/tools/chatter_llm.py b/tools/chatter_llm.py
+index 07f029f..712f034 100644
+--- a/tools/chatter_llm.py
++++ b/tools/chatter_llm.py
+@@ -61,6 +61,28 @@ def _openrouter_headers(config):
+     return headers or None
+ 
+ 
++def _openai_client_kwargs(config):
++    """Build OpenAI client options, including compatible endpoints."""
++    kwargs = {
++        'api_key': config.get('LLMChatter.OpenAI.ApiKey', ''),
++    }
++    base_url = str(config.get(
++        'LLMChatter.OpenAI.BaseUrl', ''
++    )).strip()
++    if base_url:
++        kwargs['base_url'] = base_url
++    return kwargs
++
++
++def _apply_openai_options(kwargs, config):
++    """Attach optional OpenAI-compatible reasoning controls."""
++    effort = str(config.get(
++        'LLMChatter.OpenAI.ReasoningEffort', ''
++    )).strip().lower()
++    if effort and effort not in ('0', 'off', 'disabled'):
++        kwargs['reasoning_effort'] = effort
++
++
+ def _ollama_user_msg(user_msg, config):
+     """Apply Ollama-specific transforms to user msg
+     (e.g. /no_think prefix)."""
+@@ -227,9 +249,7 @@ def get_llm_client(config):
+         elif provider == 'openai':
+             import openai
+             _main_client = openai.OpenAI(
+-                api_key=config.get(
+-                    'LLMChatter.OpenAI.ApiKey', ''
+-                ),
++                **_openai_client_kwargs(config)
+             )
+         elif provider == 'google':
+             import openai
+@@ -353,6 +373,8 @@ def call_llm(
+             }
+             if provider == 'google':
+                 _apply_google_options(kwargs, config)
++            elif provider == 'openai':
++                _apply_openai_options(kwargs, config)
+             response = client.chat.completions.create(
+                 **kwargs
+             )
+@@ -462,7 +484,7 @@ def _get_quick_analyze_client(config):
+             if not api_key:
+                 return None, main_provider
+             _quick_analyze_client = openai.OpenAI(
+-                api_key=api_key
++                **_openai_client_kwargs(config)
+             )
+         elif qa_provider == 'google':
+             import openai
+@@ -630,6 +652,8 @@ def quick_llm_analyze(
+             }
+             if provider == 'google':
+                 _apply_google_options(kwargs, config)
++            elif provider == 'openai':
++                _apply_openai_options(kwargs, config)
+             response = (
+                 active_client
+                 .chat.completions.create(
+diff --git a/tools/screenshot_agent.py b/tools/screenshot_agent.py
+index 105595f..681421a 100644
+--- a/tools/screenshot_agent.py
++++ b/tools/screenshot_agent.py
+@@ -151,6 +151,10 @@ def load_screenshot_config(raw: dict) -> dict:
+             'LLMChatter.Anthropic.ApiKey', ''),
+         'openai_api_key': raw.get(
+             'LLMChatter.OpenAI.ApiKey', ''),
++        'openai_base_url': raw.get(
++            'LLMChatter.OpenAI.BaseUrl', ''),
++        'openai_reasoning_effort': raw.get(
++            'LLMChatter.OpenAI.ReasoningEffort', ''),
+         'google_api_key': raw.get(
+             'LLMChatter.Google.ApiKey', ''),
+         'google_base_url': raw.get(
+@@ -302,8 +306,9 @@ def _call_anthropic(
+ 
+ def _call_openai(
+     jpeg_b64: str, client, model: str,
++    reasoning_effort: str = '',
+ ) -> 'str | None':
+-    resp = client.chat.completions.create(
++    kwargs = dict(
+         model=model,
+         max_tokens=300,
+         messages=[{
+@@ -325,6 +330,10 @@ def _call_openai(
+             }],
+         }],
+     )
++    effort = str(reasoning_effort).strip().lower()
++    if effort and effort not in ('0', 'off', 'disabled'):
++        kwargs['reasoning_effort'] = effort
++    resp = client.chat.completions.create(**kwargs)
+     content = resp.choices[0].message.content
+     if not content:
+         finish_reason = getattr(
+@@ -343,6 +352,7 @@ def analyze_screenshot(
+     client,
+     model: str,
+     provider: str = 'openai',
++    reasoning_effort: str = '',
+ ) -> 'dict | None':
+     """Send screenshot to vision LLM, return structured
+     description or None if uninteresting / error."""
+@@ -352,7 +362,13 @@ def analyze_screenshot(
+         if provider == 'anthropic':
+             raw = _call_anthropic(b64, client, model)
+         else:
+-            raw = _call_openai(b64, client, model)
++            raw = _call_openai(
++                b64, client, model,
++                reasoning_effort=(
++                    reasoning_effort
++                    if provider == 'openai' else ''
++                ),
++            )
+     except Exception as e:
+         log.error("Vision API call failed: %s", e)
+         return None
+@@ -672,6 +688,7 @@ def _do_capture_cycle(
+         vision_client,
+         config['vision_model'],
+         provider=config['vision_provider'],
++        reasoning_effort=config['openai_reasoning_effort'],
+     )
+     if description is None:
+         return
+@@ -734,8 +751,10 @@ def _create_vision_client(config: dict):
+         return openai.OpenAI(**kwargs)
+     else:
+         import openai
+-        return openai.OpenAI(
+-            api_key=config['openai_api_key'])
++        kwargs = {'api_key': config['openai_api_key']}
++        if config['openai_base_url']:
++            kwargs['base_url'] = config['openai_base_url']
++        return openai.OpenAI(**kwargs)
+ 
+ 
+ def run_agent(config: dict) -> None:
+diff --git a/tools/tests/test_openai_compatible_endpoint.py b/tools/tests/test_openai_compatible_endpoint.py
+new file mode 100644
+index 0000000..8d60189
+--- /dev/null
++++ b/tools/tests/test_openai_compatible_endpoint.py
+@@ -0,0 +1,195 @@
++#!/usr/bin/env python3
++"""Focused OpenAI-compatible endpoint and reasoning checks."""
++
++import json
++import os
++import base64
++import re
++import sys
++import types
++from pathlib import Path
++
++
++TOOLS_DIR = Path(__file__).resolve().parents[1]
++if str(TOOLS_DIR) not in sys.path:
++    sys.path.insert(0, str(TOOLS_DIR))
++
++import chatter_llm  # noqa: E402
++
++
++class _PromptParts(str):
++    system_prompt = None
++    user_prompt = ''
++
++
++_shared_stub = types.ModuleType('chatter_shared')
++_shared_stub.PromptParts = _PromptParts
++sys.modules['chatter_shared'] = _shared_stub
++
++
++class _Message:
++    content = '{"message":"Ready","emote":null,"action":null}'
++    tool_calls = None
++
++
++class _Choice:
++    message = _Message()
++    finish_reason = 'stop'
++
++
++class _Response:
++    choices = [_Choice()]
++
++
++class _Completions:
++    def __init__(self):
++        self.kwargs = None
++
++    def create(self, **kwargs):
++        self.kwargs = kwargs
++        return _Response()
++
++
++class _Chat:
++    def __init__(self):
++        self.completions = _Completions()
++
++
++class _Client:
++    def __init__(self):
++        self.chat = _Chat()
++
++
++def test_openai_client_kwargs_support_compatible_base_url():
++    kwargs = chatter_llm._openai_client_kwargs({
++        'LLMChatter.OpenAI.ApiKey': 'lm-studio',
++        'LLMChatter.OpenAI.BaseUrl': 'http://127.0.0.1:1234/v1',
++    })
++    assert kwargs == {
++        'api_key': 'lm-studio',
++        'base_url': 'http://127.0.0.1:1234/v1',
++    }
++
++
++def test_none_reasoning_effort_is_sent():
++    kwargs = {}
++    chatter_llm._apply_openai_options(kwargs, {
++        'LLMChatter.OpenAI.ReasoningEffort': 'none',
++    })
++    assert kwargs['reasoning_effort'] == 'none'
++
++
++def test_empty_or_off_reasoning_effort_is_omitted():
++    for value in ('', 'off', 'disabled', '0'):
++        kwargs = {}
++        chatter_llm._apply_openai_options(kwargs, {
++            'LLMChatter.OpenAI.ReasoningEffort': value,
++        })
++        assert 'reasoning_effort' not in kwargs
++
++
++def test_main_and_quick_calls_send_reasoning_effort():
++    config = {
++        'LLMChatter.Provider': 'openai',
++        'LLMChatter.Model': 'qwen/qwen3.5-9b',
++        'LLMChatter.OpenAI.ReasoningEffort': 'none',
++        'LLMChatter.MaxTokens': 120,
++        'LLMChatter.Temperature': 0.7,
++    }
++
++    main_client = _Client()
++    result = chatter_llm.call_llm(
++        main_client, 'Say hello.', config,
++        label='compat_test',
++    )
++    assert result.startswith('{"message"')
++    assert (
++        main_client.chat.completions.kwargs['reasoning_effort']
++        == 'none'
++    )
++
++    quick_client = _Client()
++    result = chatter_llm.quick_llm_analyze(
++        quick_client, config, 'Classify this.',
++        label='compat_quick_test',
++    )
++    assert result.startswith('{"message"')
++    assert (
++        quick_client.chat.completions.kwargs['reasoning_effort']
++        == 'none'
++    )
++
++
++def live_lmstudio_smoke():
++    config = {
++        'LLMChatter.Provider': 'openai',
++        'LLMChatter.Model': 'qwen/qwen3.5-9b',
++        'LLMChatter.OpenAI.ApiKey': 'lm-studio',
++        'LLMChatter.OpenAI.BaseUrl': 'http://127.0.0.1:1234/v1',
++        'LLMChatter.OpenAI.ReasoningEffort': 'none',
++        'LLMChatter.MaxTokens': 120,
++        'LLMChatter.Temperature': 0.7,
++    }
++    client = chatter_llm.get_llm_client(config)
++    result = chatter_llm.call_llm(
++        client,
++        (
++            'Return only JSON with keys message, emote, and action. '
++            'Write one grounded fantasy greeting from Branna, a weary '
++            'dwarven scout, to Rowan. Use null for emote and action.'
++        ),
++        config,
++        label='live_lmstudio_compat_test',
++    )
++    match = re.search(r'\{.*\}', result, re.DOTALL)
++    assert match is not None
++    parsed = json.loads(match.group())
++    assert set(parsed) == {'message', 'emote', 'action'}
++    assert parsed['message']
++    assert parsed['emote'] is None
++    assert parsed['action'] is None
++
++
++def live_lmstudio_vision_smoke():
++    import openai
++    import screenshot_agent
++
++    client = openai.OpenAI(
++        api_key='lm-studio',
++        base_url='http://127.0.0.1:1234/v1',
++    )
++    image_path = TOOLS_DIR.parent / 'icon.png'
++    image_b64 = base64.standard_b64encode(
++        image_path.read_bytes()
++    ).decode()
++    result = screenshot_agent._call_openai(
++        image_b64,
++        client,
++        'qwen/qwen3.5-9b',
++        reasoning_effort='none',
++    )
++    match = re.search(r'\{.*\}', result, re.DOTALL)
++    assert match is not None
++    parsed = json.loads(match.group())
++    known_fields = {
++        'landmark_type', 'weather', 'time_of_day', 'biome',
++        'atmosphere', 'environment', 'creatures',
++        'interesting', 'skip_reason',
++    }
++    assert known_fields.intersection(parsed)
++
++
++def main() -> int:
++    test_openai_client_kwargs_support_compatible_base_url()
++    test_none_reasoning_effort_is_sent()
++    test_empty_or_off_reasoning_effort_is_omitted()
++    test_main_and_quick_calls_send_reasoning_effort()
++    if os.environ.get('LIVE_LMSTUDIO') == '1':
++        live_lmstudio_smoke()
++        live_lmstudio_vision_smoke()
++    print('OK')
++    return 0
++
++
++if __name__ == '__main__':
++    raise SystemExit(main())
+-- 
+2.54.0.windows.1
+

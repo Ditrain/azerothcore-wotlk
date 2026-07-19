@@ -55,7 +55,10 @@ The first play period should add convenience and social texture without yet chan
 - LLM chatter provides two complementary experiences through one system: occasional ambient conversations among PlayerBots and eligible nearby NPCs, and deeper recurring companion dialogue shaped by persistent personalities, backstories, and memories.
 - Dialogue generation does not control combat, navigation, quests, loot, economy actions, or database mutation. Existing AzerothCore and PlayerBots systems remain authoritative for gameplay.
 - Chatter should favor memorable, divergent exchanges over message volume. Tune triggers, cooldowns, scene length, and concurrency to protect immersion, desktop gaming performance, and readable chat.
-- The normal local model is Magnum v4 9B `Q4_K_M`; Gemma 4 12B IT `Q4_K_M` is the dependable secondary option. Model selection remains reversible and should be based on integrated play evidence rather than prose demonstrations alone.
+- The initial local model is the already-installed Qwen 3.5 9B `Q4_K_M` through LM Studio. Model selection remains reversible and should be based on integrated play evidence rather than prose demonstrations alone; do not add a cloud provider or download another model until this path has been played.
+- Dialogue tone should remain recognizably fantasy-RPG while supporting grounded and realistic personalities, occasional darkness, and some whimsical characters. There is no additional project-level content boundary beyond local model behavior and the owner's later play feedback.
+- Broad channels, proximity scenes, persistent identities, memories, backstories, and screenshot-triggered observations are desired, but frequency should remain conservative. One concurrent request, short individual replies, long cooldowns, and no dialogue-driven gameplay actions are the starting guardrails.
+- Names, relevant player chat, event context, identities, and memories remain local to the household server and private-LAN LM Studio path. Full request logging stays disabled. Screenshot capture must not be activated on Windows until it can queue observations without exposing MySQL to the LAN.
 
 ## Household Auction Economy
 

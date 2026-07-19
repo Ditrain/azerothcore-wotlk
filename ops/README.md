@@ -100,6 +100,31 @@ systemctl is-enabled azerothcore.target
 `disabled` is the intended initial result. Enabling or disabling boot startup
 does not otherwise change the service definitions.
 
+## Auction Bot Plus controls
+
+Auction Bot Plus is configured through the ignored owner-only
+`env/dist/etc/modules/mod_ahbot.conf`. Do not copy runtime configuration into
+Git. Routine market behavior is automatic while worldserver is running.
+
+The owner GM can use these supported in-game commands:
+
+- `.ahbot update` advances one configured update tick; it does not necessarily
+  run a seller or buyer action until that action's interval is reached.
+- `.ahbot reload` reloads module configuration and rebuilds seller candidates.
+- `.ahbot empty` removes bot-owned auctions, refunds current bidders, and
+  cleans the generated item instances.
+
+`.ahbot empty` does not cancel AHBot bids on player-owned auctions and cannot
+reverse completed purchases. Treat those as normal auction-house transactions.
+
+For an economy-only rollback, first run `.ahbot empty` while the module is
+loaded, disable both seller and buyer, and stop the realm gracefully. Rebuild
+and install without `mod-ah-bot-plus` only if the module itself must be
+removed. The module adds no SQL schema, so ordinary rollback does not require a
+schema migration. The verified pre-AHBot four-database backup is the
+last-resort rollback because restoring it also discards every legitimate
+post-backup account, character, mail, auction, and gameplay change.
+
 These units intentionally do not add tmux or an attachable live console. Use
 supported in-game administrative commands when appropriate. If an attachable
 server console becomes a concrete need, add it as a separate reviewed step

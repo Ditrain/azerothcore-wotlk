@@ -563,3 +563,11 @@ Before acting in a new session:
 ### 2026-07-19 - Collaboration efficiency decision
 
 - The owner requested a deliberately leaner workflow: collect only task-relevant evidence, avoid duplicate checks and unnecessary dialogue, honor owner-performed testing, and keep approved small changes to inspect, edit, minimal verification, commit, and push.
+
+### 2026-07-19 - LLM chatter review handoff
+
+- Completed read-only review of current `Hokken/mod-llm-chatter`, `Hokken/Chatter-Companion`, and the three owner-provided reference documents. No module, bridge, schema, service, API, PlayerBots chatter, or client changes have been made.
+- The preferred first model is the owner's existing `qwen/qwen3.5-9b-q4_K_M.gguf` through LM Studio's local OpenAI-compatible endpoint. No additional model download is presently justified. Groq free is the preferred later cloud comparison/fallback; no cloud API should be exposed or configured without separate approval.
+- Recommended first scope is a narrow party-companion pilot: one concurrent request, short 80-120-token replies, long cooldowns, and only direct replies/greetings/rare idle chat. Ambient/general/proximity/BG/raid/guild chatter, screenshots, precaching, memories, backstories, emotes, and actions should initially remain disabled.
+- Before implementation, confirm the initial dialogue scope and any privacy, content, or tone limits. Then perform one approval-gated compatibility/configuration smoke-test design for the pinned core/module environment and LM Studio; preserve rollback boundaries before any database-affecting installation.
+- The client addon is optional secondary UI and should be pinned and installed only after the server module and local bridge produce reliable replies. Existing PlayerBots chatter must not be disabled until the LLM path is proven; later disable overlapping static chatter to avoid duplicate dialogue.

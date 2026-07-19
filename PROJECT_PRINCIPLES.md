@@ -105,3 +105,7 @@ For a consequential decision, record enough information to reconstruct why it wa
 - Reversal or migration path
 
 Use the most relevant living document rather than creating paperwork for its own sake. Gameplay decisions belong in `GAME_DESIGN.md`; operational state and lessons belong in `PROJECT_STATE.md`; stable project-wide preferences belong here.
+
+## Efficient Collaboration
+
+Use the smallest evidence-gathering and validation loop that safely fits the task. Avoid repeated baseline checks, exploratory back-and-forth, and testing the owner has explicitly chosen to perform; separate research from implementation and act directly once scope is approved.

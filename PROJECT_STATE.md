@@ -559,3 +559,7 @@ Before acting in a new session:
 
 - Added tracked `ops/bin/wow-start` and `ops/bin/wow-stop` wrappers around the verified `azerothcore.target` workflow and installed them for the `ditrain` user through `~/.local/bin`.
 - The wrappers preserve manual on-demand operation and do not enable boot startup. The owner will perform the live start/stop test.
+
+### 2026-07-19 - Collaboration efficiency decision
+
+- The owner requested a deliberately leaner workflow: collect only task-relevant evidence, avoid duplicate checks and unnecessary dialogue, honor owner-performed testing, and keep approved small changes to inspect, edit, minimal verification, commit, and push.

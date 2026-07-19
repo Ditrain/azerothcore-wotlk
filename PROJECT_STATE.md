@@ -326,6 +326,17 @@ Current updater evidence:
 
 Begin the separately bounded living-world dialogue increment with read-only compatibility and operational review of `Hokken/mod-llm-chatter`, its matching Chatter Companion addon, and the Ubuntu-to-LM-Studio bridge. Reconfirm current upstream revisions and licenses; inspect exact core/module hooks, PlayerBots overlap, addon requirements, bridge dependencies, persistent data, network binding, prompt/data flow, failure behavior, and rollback. Obtain the Windows desktop LAN address, LM Studio version, installed model identifiers, and preferred API-listening procedure before any implementation. Do not clone, install, expose an inference endpoint, alter PlayerBots chatter, or mutate databases during the review.
 
+Owner information needed for that review and later implementation:
+
+- Windows desktop LAN IPv4 address.
+- Exact LM Studio version.
+- Whether LM Studio's local server is already installed and tested.
+- Preferred LM Studio API port and whether API startup should be manual or automatic.
+- Exact installed model identifiers and quantizations, or confirmation that model selection remains open.
+- Whether the Chatter Companion addon is already installed on each household WoW client.
+- Preferred first dialogue scope: recurring party companions only, ambient PlayerBots/NPC conversations only, or both.
+- Any hard privacy or content-style limits beyond keeping inference traffic on the trusted LAN.
+
 ## Next Session Start Checklist
 
 Before acting in a new session:
@@ -344,6 +355,7 @@ Before acting in a new session:
 - Preserve `DITRAIN` as the owner GM at security level 2. Do not raise it to administrator level 3 or grant GM access to PlayerBots without a separate explicit decision.
 - Treat the Transmog usability objective as complete: apply, persistence, removal, and original-appearance restoration passed. Use `.cast self 200100` as the verified temporary Warpweaver path; `.npc add temp 190010` is not dependable in the current pin. The owner may independently place one permanent NPC later with `.npc add 190010`, but none exists at closeout.
 - Auction Bot Plus uses the dedicated security-0 `AHMARKET` account and Copperleaf, Ironpurse, Gearwright, and Coinbinder as its shared seller/buyer pool. Do not play, promote, delete, rename, or repurpose those characters. The next candidate is `Hokken/mod-llm-chatter`; keep all LLM networking private to the trusted LAN and complete a read-only compatibility review before implementation.
+- At AHBot closeout, 2,400 bot listings were present and one of three normal-player test auctions had an active 100-copper AHBot bid. Generated auctions use absolute 12-to-24-hour expiration, including while the realm is offline. After a long shutdown, an initially sparse market and gradual 25-item/five-minute refill are expected behavior, not evidence of database loss.
 - Install and verify only one module per separately approved increment, with a new restore-tested backup before each database-changing installation.
 - Keep Any Race/Any Class deferred until its server-DBC, client-patch, PlayerBots, trainer, spell, quest, form, pet, and resource compatibility has been reviewed separately.
 - For the LLM increment, obtain the Windows desktop LAN address, exact LM Studio version, exact installed model identifiers, and the owner's preferred API-listening procedure. Do not request or record unrelated credentials.
@@ -541,3 +553,4 @@ Before acting in a new session:
 - Aggregate validation found 83.9% core profession goods, a 256-to-51 green/blue equipment balance, every ten-level gear band represented, no poor listings, no white non-crafting listings, and no forbidden epic equipment or higher-quality items.
 - The owner posted Silverleaf, Peacebloom, and Novice's Robes from a normal playable character. A guaranteed buyer cycle placed a 100-copper AHBot bid on a player auction, proving buyer behavior without changing the 2,400 seller listings.
 - Gracefully stopped every temporary server session, closed ports 3724/8085, left boot startup disabled, verified the updater temporary directory empty, and removed all one-use helpers.
+- Committed and pushed the implementation handoff as `eb03a1900760aa58db61d6e8dfdf7a2a909c1632`, then performed a final owner-requested wrap-up pass to record the offline-auction behavior and exact information needed for the next LLM review.

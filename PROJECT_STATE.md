@@ -554,3 +554,8 @@ Before acting in a new session:
 - The owner posted Silverleaf, Peacebloom, and Novice's Robes from a normal playable character. A guaranteed buyer cycle placed a 100-copper AHBot bid on a player auction, proving buyer behavior without changing the 2,400 seller listings.
 - Gracefully stopped every temporary server session, closed ports 3724/8085, left boot startup disabled, verified the updater temporary directory empty, and removed all one-use helpers.
 - Committed and pushed the implementation handoff as `eb03a1900760aa58db61d6e8dfdf7a2a909c1632`, then performed a final owner-requested wrap-up pass to record the offline-auction behavior and exact information needed for the next LLM review.
+
+### 2026-07-19 - Household startup commands added
+
+- Added tracked `ops/bin/wow-start` and `ops/bin/wow-stop` wrappers around the verified `azerothcore.target` workflow and installed them for the `ditrain` user through `~/.local/bin`.
+- The wrappers preserve manual on-demand operation and do not enable boot startup. The owner will perform the live start/stop test.

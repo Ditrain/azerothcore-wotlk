@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo systemctl start azerothcore.target
+
+if systemctl --quiet is-active \
+    azerothcore-auth.service azerothcore-world.service; then
+    echo "AzerothCore is running. You can launch WoW."
+else
+    echo "AzerothCore did not start cleanly."
+    systemctl --no-pager --full status \
+        azerothcore-auth.service azerothcore-world.service || true
+    exit 1
+fi

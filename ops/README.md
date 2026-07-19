@@ -21,6 +21,16 @@ the private runtime configuration.
 
 ## Normal household workflow
 
+For routine play, use the installed convenience commands:
+
+```bash
+wow-start
+wow-stop
+```
+
+These commands start or gracefully stop `azerothcore.target`. They do not
+enable automatic startup at boot.
+
 Start both servers on demand:
 
 ```bash
